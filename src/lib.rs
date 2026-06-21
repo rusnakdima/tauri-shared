@@ -2,6 +2,9 @@ pub mod error;
 pub mod macros;
 pub mod response;
 pub mod result;
+pub mod schema;
+
+pub use schema::*;
 
 pub use error::AppError;
 pub use macros::impl_entity_commands_inner;

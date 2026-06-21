@@ -11,5 +11,7 @@ thiserror = "1"
 proc-macro2 = "1"
 quote = "1"
 syn = "1"
+schemars = { version = "0.8", features = ["derive"] }
+validator = { version = "0.16", features = ["derive"] }
 
 [lib]
