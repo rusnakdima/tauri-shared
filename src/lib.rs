@@ -1,4 +1,6 @@
+pub mod crud;
 pub mod error;
+pub mod logger;
 pub mod macros;
 pub mod response;
 pub mod result;
@@ -6,7 +8,9 @@ pub mod schema;
 
 pub use schema::*;
 
+pub use crud::{CrudFilter, CrudQuery, CrudResult};
 pub use error::AppError;
+pub use logger::{Logger, LogEntry, LogLevel};
 pub use macros::impl_entity_commands_inner;
 pub use response::{Response, Status};
 pub use result::{OrmResult, Result};
