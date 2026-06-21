@@ -1,0 +1,21 @@
+# Build outputs
+target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rust lock file (optional - per-crate)
+# Cargo.lock
+
+# Logs
+*.log
+
+# Testing
+coverage/
