@@ -26,7 +26,9 @@ impl JsonDb {
     pub fn insert(&self, collection: &str, id: &str, doc: Value) -> std::io::Result<()> {
         {
             let mut data = self.data.write().unwrap();
-            let coll = data.entry(collection.to_string()).or_insert_with(|| Value::Object(serde_json::Map::new()));
+            let coll = data
+                .entry(collection.to_string())
+                .or_insert_with(|| Value::Object(serde_json::Map::new()));
             if let Value::Object(ref mut map) = coll {
                 map.insert(id.to_string(), doc);
             }
@@ -36,9 +38,7 @@ impl JsonDb {
 
     pub fn find(&self, collection: &str, id: &str) -> Option<Value> {
         let data = self.data.read().unwrap();
-        data.get(collection)
-            .and_then(|coll| coll.get(id))
-            .cloned()
+        data.get(collection).and_then(|coll| coll.get(id)).cloned()
     }
 
     pub fn find_all(&self, collection: &str) -> Vec<Value> {
@@ -58,11 +58,7 @@ impl JsonDb {
         let data = self.data.read().unwrap();
         data.get(collection)
             .and_then(|coll| coll.as_object())
-            .map(|map| {
-                map.iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect()
-            })
+            .map(|map| map.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
             .unwrap_or_default()
     }
 
