@@ -49,6 +49,23 @@ impl JsonDb {
             .unwrap_or_default()
     }
 
+    pub fn collections(&self) -> Vec<String> {
+        let data = self.data.read().unwrap();
+        data.keys().cloned().collect()
+    }
+
+    pub fn find_all_with_id(&self, collection: &str) -> Vec<(String, Value)> {
+        let data = self.data.read().unwrap();
+        data.get(collection)
+            .and_then(|coll| coll.as_object())
+            .map(|map| {
+                map.iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     pub fn update(&self, collection: &str, id: &str, doc: Value) -> std::io::Result<()> {
         self.insert(collection, id, doc)
     }
