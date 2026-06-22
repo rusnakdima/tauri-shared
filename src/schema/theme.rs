@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -41,19 +41,45 @@ pub struct ThemeColors {
     pub error: String,
 }
 
-fn default_bg_primary() -> String { "#ffffff".to_string() }
-fn default_bg_secondary() -> String { "#f3f4f6".to_string() }
-fn default_bg_tertiary() -> String { "#e5e7eb".to_string() }
-fn default_text_primary() -> String { "#111827".to_string() }
-fn default_text_secondary() -> String { "#374151".to_string() }
-fn default_text_muted() -> String { "#6b7280".to_string() }
-fn default_border() -> String { "#d1d5db".to_string() }
-fn default_primary() -> String { "#3b82f6".to_string() }
-fn default_secondary() -> String { "#6b7280".to_string() }
-fn default_accent() -> String { "#10b981".to_string() }
-fn default_success() -> String { "#22c55e".to_string() }
-fn default_warning() -> String { "#f59e0b".to_string() }
-fn default_error() -> String { "#ef4444".to_string() }
+fn default_bg_primary() -> String {
+    "#ffffff".to_string()
+}
+fn default_bg_secondary() -> String {
+    "#f3f4f6".to_string()
+}
+fn default_bg_tertiary() -> String {
+    "#e5e7eb".to_string()
+}
+fn default_text_primary() -> String {
+    "#111827".to_string()
+}
+fn default_text_secondary() -> String {
+    "#374151".to_string()
+}
+fn default_text_muted() -> String {
+    "#6b7280".to_string()
+}
+fn default_border() -> String {
+    "#d1d5db".to_string()
+}
+fn default_primary() -> String {
+    "#3b82f6".to_string()
+}
+fn default_secondary() -> String {
+    "#6b7280".to_string()
+}
+fn default_accent() -> String {
+    "#10b981".to_string()
+}
+fn default_success() -> String {
+    "#22c55e".to_string()
+}
+fn default_warning() -> String {
+    "#f59e0b".to_string()
+}
+fn default_error() -> String {
+    "#ef4444".to_string()
+}
 
 impl Default for ThemeColors {
     fn default() -> Self {

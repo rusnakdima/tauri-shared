@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
+use super::theme::{get_dark_theme, get_light_theme, Theme};
 use schemars::JsonSchema;
-use super::theme::{Theme, get_light_theme, get_dark_theme};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
