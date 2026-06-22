@@ -5,6 +5,7 @@ pub mod macros;
 pub mod response;
 pub mod result;
 pub mod schema;
+pub mod storage;
 
 pub use schema::*;
 
@@ -14,6 +15,7 @@ pub use logger::{Logger, LogEntry, LogLevel};
 pub use macros::impl_entity_commands_inner;
 pub use response::{Response, Status};
 pub use result::{OrmResult, Result};
+pub use storage::{JsonDb, SignalStore};
 
 #[macro_export]
 macro_rules! impl_entity_commands {
