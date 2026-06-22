@@ -187,10 +187,20 @@ impl SyncEngine {
 
         while let Some(op) = self.queue.pop() {
             match op {
-                SyncOperation::Insert { collection, id, doc, .. } => {
+                SyncOperation::Insert {
+                    collection,
+                    id,
+                    doc,
+                    ..
+                } => {
                     bridge.insert(&collection, &id, doc).await?;
                 }
-                SyncOperation::Update { collection, id, doc, .. } => {
+                SyncOperation::Update {
+                    collection,
+                    id,
+                    doc,
+                    ..
+                } => {
                     bridge.update(&collection, &id, doc).await?;
                 }
                 SyncOperation::Delete { collection, id, .. } => {
