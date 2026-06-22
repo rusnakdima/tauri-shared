@@ -6,6 +6,7 @@ pub mod response;
 pub mod result;
 pub mod schema;
 pub mod storage;
+pub mod sync;
 
 pub use schema::*;
 
@@ -16,6 +17,7 @@ pub use macros::impl_entity_commands_inner;
 pub use response::{Response, Status};
 pub use result::{OrmResult, Result};
 pub use storage::{JsonDb, SignalStore};
+pub use sync::{MongoBridge, SyncEngine, SyncOperation, SyncQueue};
 
 #[macro_export]
 macro_rules! impl_entity_commands {
