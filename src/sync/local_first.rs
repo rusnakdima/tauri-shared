@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::sync::RwLock;
+
+type LastSyncState = HashMap<String, HashMap<String, Value>>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -85,6 +88,7 @@ pub struct SyncEngine {
     queue: SyncQueue,
     local_db: crate::storage::JsonDb,
     mongo_bridge: Option<crate::sync::MongoBridge>,
+    last_sync_state: RwLock<LastSyncState>,
 }
 
 impl SyncEngine {
@@ -93,6 +97,7 @@ impl SyncEngine {
             queue: SyncQueue::new(),
             local_db,
             mongo_bridge: None,
+            last_sync_state: RwLock::new(HashMap::new()),
         }
     }
 
@@ -104,24 +109,98 @@ impl SyncEngine {
         self.queue.push(op);
     }
 
-    pub fn sync_to_cloud(&self) -> Result<(), String> {
+    pub async fn sync_to_cloud(&self) -> Result<(), String> {
         let Some(ref bridge) = self.mongo_bridge else {
             return Err("MongoDB bridge not configured".to_string());
         };
 
-        while let Some(op) = self.queue.pop() {
-            match op {
-                SyncOperation::Insert { collection, id, doc, .. } => {
-                    bridge.insert(&collection, &id, doc)?;
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as i64;
+
+        let old_sync_state = self.last_sync_state.read().unwrap().clone();
+        let mut new_sync_state: LastSyncState = HashMap::new();
+
+        let collections = self.local_db.collections();
+        for collection in collections {
+            let docs = self.local_db.find_all_with_id(&collection);
+            let mut coll_sync = HashMap::new();
+
+            for (id, doc) in docs {
+                let id_clone = id.clone();
+                let doc_clone = doc.clone();
+
+                let old_doc = old_sync_state
+                    .get(&collection)
+                    .and_then(|c| c.get(&id_clone));
+
+                if old_doc.map_or(true, |old| old != &doc_clone) {
+                    if old_doc.is_some() {
+                        self.queue.push(SyncOperation::Update {
+                            collection: collection.clone(),
+                            id: id.clone(),
+                            doc: doc_clone.clone(),
+                            timestamp: now,
+                        });
+                    } else {
+                        self.queue.push(SyncOperation::Insert {
+                            collection: collection.clone(),
+                            id: id.clone(),
+                            doc: doc_clone.clone(),
+                            timestamp: now,
+                        });
+                    }
                 }
-                SyncOperation::Update { collection, id, doc, .. } => {
-                    bridge.update(&collection, &id, doc)?;
+
+                coll_sync.insert(id_clone, doc_clone);
+            }
+
+            new_sync_state.insert(collection, coll_sync);
+        }
+
+        for (collection, old_docs) in &old_sync_state {
+            if !new_sync_state.contains_key(collection) {
+                for (id, _) in old_docs {
+                    self.queue.push(SyncOperation::Delete {
+                        collection: collection.clone(),
+                        id: id.clone(),
+                        timestamp: now,
+                    });
                 }
-                SyncOperation::Delete { collection, id, .. } => {
-                    bridge.delete(&collection, &id)?;
+            } else {
+                for (id, _) in old_docs {
+                    if !new_sync_state
+                        .get(collection)
+                        .map(|c| c.contains_key(id))
+                        .unwrap_or(false)
+                    {
+                        self.queue.push(SyncOperation::Delete {
+                            collection: collection.clone(),
+                            id: id.clone(),
+                            timestamp: now,
+                        });
+                    }
                 }
             }
         }
+
+        while let Some(op) = self.queue.pop() {
+            match op {
+                SyncOperation::Insert { collection, id, doc, .. } => {
+                    bridge.insert(&collection, &id, doc).await?;
+                }
+                SyncOperation::Update { collection, id, doc, .. } => {
+                    bridge.update(&collection, &id, doc).await?;
+                }
+                SyncOperation::Delete { collection, id, .. } => {
+                    bridge.delete(&collection, &id).await?;
+                }
+            }
+        }
+
+        *self.last_sync_state.write().unwrap() = new_sync_state;
+
         Ok(())
     }
 }

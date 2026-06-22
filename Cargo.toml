@@ -14,5 +14,10 @@ syn = "1"
 schemars = { version = "0.8", features = ["derive"] }
 validator = { version = "0.16", features = ["derive"] }
 chrono = "0.4"
+reqwest = { version = "0.12", features = ["json"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt"] }
+wiremock = "0.6"
 
 [lib]
