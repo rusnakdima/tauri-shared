@@ -12,7 +12,7 @@ pub use schema::*;
 
 pub use crud::{CrudFilter, CrudQuery, CrudResult};
 pub use error::AppError;
-pub use logger::{Logger, LogEntry, LogLevel};
+pub use logger::{LogEntry, LogLevel, Logger};
 pub use macros::impl_entity_commands_inner;
 pub use response::{Response, Status};
 pub use result::{OrmResult, Result};
