@@ -18,6 +18,8 @@ pub struct ComponentDef {
     #[serde(default)]
     pub default_classes: String,
     #[serde(default)]
+    pub grid_defaults: Option<GridDefaults>,
+    #[serde(default)]
     pub slots: Vec<String>,
     #[serde(default)]
     pub allowed_children: String,
@@ -25,6 +27,27 @@ pub struct ComponentDef {
     pub events: Vec<String>,
     #[serde(default)]
     pub i18n: HashMap<String, HashMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GridDefaults {
+    #[serde(default = "default_col_span")]
+    pub default_col_span: i32,
+    #[serde(default = "default_row_span")]
+    pub default_row_span: i32,
+    #[serde(default)]
+    pub min_width: Option<String>,
+    #[serde(default)]
+    pub max_width: Option<String>,
+}
+
+fn default_col_span() -> i32 {
+    1
+}
+
+fn default_row_span() -> i32 {
+    1
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]

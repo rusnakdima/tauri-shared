@@ -60,7 +60,7 @@ pub struct CanvasElement {
     pub id: String,
     pub component_id: String,
     #[serde(default)]
-    pub position: ElementPosition,
+    pub grid_position: GridPosition,
     #[serde(default)]
     pub props: HashMap<String, serde_json::Value>,
     #[serde(default)]
@@ -73,34 +73,42 @@ pub struct CanvasElement {
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct ElementPosition {
-    #[serde(default)]
-    pub x: i32,
-    #[serde(default)]
-    pub y: i32,
-    #[serde(default = "default_width")]
-    pub width: i32,
-    #[serde(default = "default_height")]
-    pub height: i32,
+pub struct GridPosition {
+    #[serde(default = "default_column")]
+    pub column: i32,
+    #[serde(default = "default_row")]
+    pub row: i32,
+    #[serde(default = "default_col_span")]
+    pub col_span: i32,
+    #[serde(default = "default_row_span")]
+    pub row_span: i32,
 }
 
-impl Default for ElementPosition {
+impl Default for GridPosition {
     fn default() -> Self {
         Self {
-            x: 0,
-            y: 0,
-            width: 400,
-            height: 200,
+            column: 1,
+            row: 1,
+            col_span: 1,
+            row_span: 1,
         }
     }
 }
 
-fn default_width() -> i32 {
-    400
+fn default_column() -> i32 {
+    1
 }
 
-fn default_height() -> i32 {
-    200
+fn default_row() -> i32 {
+    1
+}
+
+fn default_col_span() -> i32 {
+    1
+}
+
+fn default_row_span() -> i32 {
+    1
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
