@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use ts_rs::TS;
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -29,8 +30,9 @@ pub struct ComponentDef {
     pub i18n: HashMap<String, HashMap<String, String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct GridDefaults {
     #[serde(default = "default_col_span")]
     pub default_col_span: i32,
@@ -50,12 +52,14 @@ fn default_row_span() -> i32 {
     1
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ComponentProp {
     #[serde(default = "default_prop_type")]
     pub prop_type: String,
     #[serde(default)]
+    #[ts(skip)]
     pub default_value: Option<serde_json::Value>,
     #[serde(default)]
     pub options: Option<Vec<String>>,
@@ -67,8 +71,9 @@ fn default_prop_type() -> String {
     "string".to_string()
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ComponentEvent {
     pub name: String,
     #[serde(default)]
