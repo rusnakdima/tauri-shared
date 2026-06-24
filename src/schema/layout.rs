@@ -2,6 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use super::grid::{TailwindBreakpoints, TailwindResponsiveClasses};
+
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Layout {
@@ -30,6 +32,8 @@ pub struct LayoutSlot {
     pub grid_row: Option<String>,
     #[serde(default)]
     pub grid_area: Option<String>,
+    #[serde(default)]
+    pub responsive_classes: Option<TailwindResponsiveClasses>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
@@ -44,6 +48,8 @@ pub struct GridTemplate {
     pub gap: String,
     #[serde(default)]
     pub areas: Option<Vec<GridArea>>,
+    #[serde(default)]
+    pub breakpoints: Option<TailwindBreakpoints>,
 }
 
 fn default_grid_columns() -> Vec<GridTrack> {

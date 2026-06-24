@@ -13,11 +13,17 @@ quote = "1"
 syn = "1"
 schemars = { version = "0.8", features = ["derive"] }
 validator = { version = "0.16", features = ["derive"] }
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12", features = ["json"] }
+nosql_orm = { path = "../nosql_orm", features = ["json", "mongo"] }
+petgraph = { version = "0.6", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt"] }
 wiremock = "0.6"
+
+[features]
+default = []
+algorithms = ["dep:petgraph"]
 
 [lib]

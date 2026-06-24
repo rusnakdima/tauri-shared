@@ -1,5 +1,6 @@
 pub mod app;
 pub mod component;
+pub mod grid;
 pub mod i18n;
 pub mod layout;
 pub mod module;
@@ -9,6 +10,7 @@ pub mod theme;
 
 pub use app::*;
 pub use component::*;
+pub use grid::*;
 pub use i18n::*;
 pub use layout::*;
 pub use module::*;
