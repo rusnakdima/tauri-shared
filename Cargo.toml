@@ -15,8 +15,9 @@ schemars = { version = "0.8", features = ["derive"] }
 validator = { version = "0.16", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12", features = ["json"] }
-nosql_orm = { path = "../nosql_orm", features = ["json", "mongo"] }
+nosql_orm = { git = "https://github.com/rusnakdima/nosql_orm", branch = "main", features = ["json", "mongo", "sql-postgres", "sql-sqlite", "sql-mysql", "redis"] }
 petgraph = { version = "0.6", optional = true }
+ts-rs = "6"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt"] }
