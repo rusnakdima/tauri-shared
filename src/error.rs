@@ -30,36 +30,19 @@ impl std::fmt::Display for AppError {
 
 impl std::error::Error for AppError {}
 
-impl From<orm::OrmError> for AppError {
-    fn from(err: orm::OrmError) -> Self {
-        use orm::OrmError;
+impl From<nosql_orm::error::OrmError> for AppError {
+    fn from(err: nosql_orm::error::OrmError) -> Self {
         match err {
-            OrmError::NotFound(entity) => AppError::NotFound(entity),
-            OrmError::ValidationError(msg) => AppError::ValidationError(msg),
-            OrmError::Duplicate(entity) => AppError::Duplicate(entity),
-            OrmError::Database(msg) => AppError::Database(msg),
-            OrmError::Network(msg) => AppError::Network(msg),
-            OrmError::Internal(msg) => AppError::Internal(msg),
+            nosql_orm::error::OrmError::NotFound(entity) => AppError::NotFound(entity),
+            nosql_orm::error::OrmError::Validation(msg) => AppError::ValidationError(msg),
+            nosql_orm::error::OrmError::Duplicate(entity) => AppError::Duplicate(entity),
+            nosql_orm::error::OrmError::Connection(msg) => AppError::Database(msg),
+            nosql_orm::error::OrmError::Provider(msg) => AppError::Database(msg),
+            nosql_orm::error::OrmError::Query(msg) => AppError::Database(msg),
+            nosql_orm::error::OrmError::Internal(msg) => AppError::Internal(msg),
+            _ => AppError::Internal(err.to_string()),
         }
     }
 }
 
-pub mod orm {
-    use thiserror::Error;
-
-    #[derive(Debug, Clone, Error)]
-    pub enum OrmError {
-        #[error("{0} not found")]
-        NotFound(String),
-        #[error("Validation error: {0}")]
-        ValidationError(String),
-        #[error("{0} already exists")]
-        Duplicate(String),
-        #[error("Database error: {0}")]
-        Database(String),
-        #[error("Network error: {0}")]
-        Network(String),
-        #[error("Internal error: {0}")]
-        Internal(String),
-    }
-}
+pub use nosql_orm::error::OrmResult;
