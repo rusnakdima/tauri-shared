@@ -1,10 +1,5 @@
 #[cfg(feature = "algorithms")]
-use petgraph::{
-    graph::Graph,
-    graph::NodeIndex,
-    Directed,
-    Undirected,
-};
+use petgraph::{graph::Graph, graph::NodeIndex, Directed, Undirected};
 
 #[cfg(feature = "algorithms")]
 pub fn create_graph() -> Graph<String, f64, Directed> {

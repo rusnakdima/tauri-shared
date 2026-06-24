@@ -3,8 +3,8 @@ mod file_writer;
 pub use file_writer::FileLogger;
 
 use serde::Serialize;
-use std::sync::{Arc, RwLock};
 use std::sync::OnceLock;
+use std::sync::{Arc, RwLock};
 
 static LOGGER: OnceLock<Logger> = OnceLock::new();
 

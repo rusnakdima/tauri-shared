@@ -1,7 +1,7 @@
+use chrono::Local;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufWriter, Write};
 use std::path::PathBuf;
-use chrono::Local;
 
 pub struct FileLogger {
     writer: BufWriter<File>,
@@ -14,10 +14,7 @@ impl FileLogger {
         fs::create_dir_all(&log_dir)?;
         let current_date = Local::now().format("%Y-%m-%d").to_string();
         let path = log_dir.join(format!("app-{}.jsonl", current_date));
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)?;
+        let file = OpenOptions::new().create(true).append(true).open(&path)?;
         Ok(Self {
             writer: BufWriter::new(file),
             current_date,
@@ -37,11 +34,10 @@ impl FileLogger {
 
     fn rotate(&mut self) -> io::Result<()> {
         self.writer.flush()?;
-        let path = self.log_dir.join(format!("app-{}.jsonl", self.current_date));
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)?;
+        let path = self
+            .log_dir
+            .join(format!("app-{}.jsonl", self.current_date));
+        let file = OpenOptions::new().create(true).append(true).open(&path)?;
         self.writer = BufWriter::new(file);
         self.current_date = Local::now().format("%Y-%m-%d").to_string();
         Ok(())
