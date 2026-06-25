@@ -20,9 +20,11 @@ pub use theme::*;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct UiSchema {
     pub schema_version: String,
     pub app: AppConfig,

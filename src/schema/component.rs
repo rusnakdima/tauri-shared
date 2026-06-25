@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use ts_rs::TS;
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ComponentDef {
     pub id: String,
     pub name: String,

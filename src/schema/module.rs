@@ -1,8 +1,10 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ModuleDef {
     pub id: String,
     pub name: String,
@@ -12,8 +14,9 @@ pub struct ModuleDef {
     pub middleware: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct CommandDef {
     pub name: String,
     #[serde(default)]
@@ -26,8 +29,9 @@ fn default_return_type() -> String {
     "void".to_string()
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct MiddlewareDef {
     pub name: String,
     #[serde(default)]

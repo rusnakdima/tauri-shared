@@ -1,11 +1,13 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use ts_rs::TS;
 
 use super::grid::{TailwindBreakpoints, TailwindResponsiveClasses};
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct Layout {
     pub id: String,
     pub name: String,
@@ -15,8 +17,9 @@ pub struct Layout {
     pub grid_template: Option<GridTemplate>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct LayoutSlot {
     #[serde(default)]
     pub component_id: Option<String>,
@@ -36,8 +39,9 @@ pub struct LayoutSlot {
     pub responsive_classes: Option<TailwindResponsiveClasses>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct GridTemplate {
     pub id: String,
     #[serde(default = "default_grid_columns")]
@@ -72,8 +76,9 @@ fn default_gap() -> String {
     "16px".to_string()
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct GridTrack {
     pub size: String,
     #[serde(default)]
@@ -82,8 +87,9 @@ pub struct GridTrack {
     pub max: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct GridArea {
     pub name: String,
     pub column_start: i32,

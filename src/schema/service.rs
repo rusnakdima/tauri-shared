@@ -1,8 +1,10 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ServiceDef {
     pub id: String,
     pub name: String,
@@ -19,8 +21,9 @@ fn default_provider() -> String {
     "nosql".to_string()
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS, Default)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ServiceCrud {
     #[serde(default = "default_crud_true")]
     pub create: bool,
@@ -38,8 +41,9 @@ fn default_crud_true() -> bool {
     true
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct ServiceField {
     pub name: String,
     #[serde(default = "default_field_type")]

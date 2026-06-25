@@ -1,9 +1,11 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use ts_rs::TS;
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct Page {
     pub id: String,
     pub name: String,
@@ -18,8 +20,9 @@ pub struct Page {
     pub canvas_elements: Vec<CanvasElement>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct PageMeta {
     #[serde(default)]
     pub title: Option<String>,
@@ -39,8 +42,9 @@ impl Default for PageMeta {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct PageSection {
     #[serde(default)]
     pub component_id: Option<String>,
@@ -54,14 +58,16 @@ fn default_visible() -> bool {
     true
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct CanvasElement {
     pub id: String,
     pub component_id: String,
     #[serde(default)]
     pub grid_position: GridPosition,
     #[serde(default)]
+    #[ts(skip)]
     pub props: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub classes: String,
@@ -71,8 +77,9 @@ pub struct CanvasElement {
     pub data_binding: Option<DataBinding>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct GridPosition {
     #[serde(default = "default_column")]
     pub column: i32,
@@ -82,6 +89,10 @@ pub struct GridPosition {
     pub col_span: i32,
     #[serde(default = "default_row_span")]
     pub row_span: i32,
+    #[serde(default)]
+    pub col_start: Option<i32>,
+    #[serde(default)]
+    pub row_start: Option<i32>,
 }
 
 impl Default for GridPosition {
@@ -91,6 +102,8 @@ impl Default for GridPosition {
             row: 1,
             col_span: 1,
             row_span: 1,
+            col_start: None,
+            row_start: None,
         }
     }
 }
@@ -111,8 +124,9 @@ fn default_row_span() -> i32 {
     1
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct DataBinding {
     pub entity: String,
     #[serde(default)]

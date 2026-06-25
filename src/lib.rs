@@ -15,7 +15,9 @@ pub mod typescript;
 #[cfg(feature = "algorithms")]
 pub mod algorithms;
 
-pub use commands::KernelEntity;
+pub use commands::{
+    db_delete_schema, db_get_all_schemas, db_get_schema, db_save_schema, KernelDb, KernelEntity,
+};
 pub use crud::{CrudFilter, CrudQuery, CrudResult};
 pub use error::AppError;
 pub use logger::{FileLogger, LogEntry, LogLevel, Logger};
@@ -27,6 +29,6 @@ pub use result::Result;
 pub use schema::*;
 pub use storage::{JsonDb, SignalStore};
 pub use sync::{MongoBridge, SyncEngine, SyncOperation, SyncQueue};
-pub use typescript::{generate_typescript_bindings, ToTypeScript};
+pub use typescript::{generate_typescript_bindings, schema_ts_bindings, ts_inline, ToTypeScript};
 
 pub use nosql_orm::Entity;

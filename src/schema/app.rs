@@ -1,9 +1,11 @@
 use super::theme::{get_dark_theme, get_light_theme, Theme};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct AppConfig {
     pub id: String,
     pub name: String,
@@ -14,8 +16,9 @@ pub struct AppConfig {
     pub settings: AppSettings,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct AppSettings {
     pub default_locale: String,
     pub supported_locales: Vec<String>,
@@ -41,8 +44,9 @@ fn default_color_mode() -> ColorMode {
     ColorMode::System
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum ColorMode {
     Light,
     Dark,
