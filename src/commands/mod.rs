@@ -1,3 +1,5 @@
+pub mod schema_commands;
+
 use nosql_orm::prelude::Entity;
 use serde::{de::DeserializeOwned, Serialize};
 use std::future::Future;
