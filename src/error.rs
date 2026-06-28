@@ -11,6 +11,9 @@ pub enum AppError {
     Internal(String),
     Database(String),
     Network(String),
+    Io(String),
+    PermissionDenied(String),
+    InvalidPath(String),
 }
 
 impl std::fmt::Display for AppError {
@@ -24,6 +27,9 @@ impl std::fmt::Display for AppError {
             AppError::Internal(msg) => write!(f, "Internal error: {}", msg),
             AppError::Database(msg) => write!(f, "Database error: {}", msg),
             AppError::Network(msg) => write!(f, "Network error: {}", msg),
+            AppError::Io(msg) => write!(f, "IO error: {}", msg),
+            AppError::PermissionDenied(msg) => write!(f, "Permission denied: {}", msg),
+            AppError::InvalidPath(msg) => write!(f, "Invalid path: {}", msg),
         }
     }
 }

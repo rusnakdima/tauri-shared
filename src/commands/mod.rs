@@ -1,4 +1,7 @@
+pub mod algorithm_commands;
+pub mod logger_commands;
 pub mod schema_commands;
+pub mod sdui_commands;
 
 use nosql_orm::prelude::Entity;
 use serde::{de::DeserializeOwned, Serialize};

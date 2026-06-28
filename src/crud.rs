@@ -1,4 +1,15 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PaginatedResult<T> {
+    pub items: Vec<T>,
+    pub has_more: bool,
+    pub total_count: usize,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrudFilter {

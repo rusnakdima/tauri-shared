@@ -1,5 +1,5 @@
 #[cfg(feature = "algorithms")]
-use petgraph::{graph::Graph, graph::NodeIndex, Directed, Undirected};
+use petgraph::{graph::Graph, graph::NodeIndex, Directed};
 
 #[cfg(feature = "algorithms")]
 pub fn create_graph() -> Graph<String, f64, Directed> {
@@ -25,7 +25,7 @@ pub fn add_edge(
 pub fn dijkstra_shortest_path(
     graph: &Graph<String, f64, Directed>,
     start: NodeIndex,
-) -> Vec<Option<f64>> {
+) -> std::collections::HashMap<NodeIndex, f64> {
     use petgraph::algo::dijkstra;
     dijkstra(graph, start, None, |e| *e.weight())
 }

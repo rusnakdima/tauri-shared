@@ -12,6 +12,9 @@ pub enum Status {
     NotFound,
     Unauthorized,
     Forbidden,
+    Info,
+    Warning,
+    Duplicate,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,10 +26,10 @@ pub struct Response<T> {
 }
 
 impl<T> Response<T> {
-    pub fn success(data: T) -> Self {
+    pub fn success(data: T, message: Option<&str>) -> Self {
         Self {
             status: Status::Success,
-            message: String::new(),
+            message: message.map(String::from).unwrap_or_default(),
             data: Some(data),
         }
     }

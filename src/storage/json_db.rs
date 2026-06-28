@@ -86,4 +86,11 @@ impl JsonDb {
         }
         std::fs::write(&self.path, json)
     }
+
+    pub fn get_collection_path(&self, collection: &str) -> std::path::PathBuf {
+        self.path
+            .parent()
+            .map(|p| p.join(format!("{}.json", collection)))
+            .unwrap_or_else(|| std::path::PathBuf::from(format!("{}.json", collection)))
+    }
 }

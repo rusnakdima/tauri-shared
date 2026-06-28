@@ -6,6 +6,7 @@ pub mod i18n;
 pub mod layout;
 pub mod module;
 pub mod page;
+pub mod runtime;
 pub mod service;
 pub mod theme;
 
@@ -17,6 +18,7 @@ pub use i18n::*;
 pub use layout::*;
 pub use module::*;
 pub use page::*;
+pub use runtime::*;
 pub use service::*;
 pub use theme::*;
 
