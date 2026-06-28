@@ -2939,7 +2939,6 @@ dependencies = [
 [[package]]
 name = "nosql_orm"
 version = "0.9.0"
-source = "git+https://github.com/rusnakdima/nosql_orm?branch=main#3aaa770db808ca85d828cdeae8ab77ef98466049"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2968,7 +2967,6 @@ dependencies = [
 [[package]]
 name = "nosql_orm_derive"
 version = "0.1.0"
-source = "git+https://github.com/rusnakdima/nosql_orm?branch=main#3aaa770db808ca85d828cdeae8ab77ef98466049"
 dependencies = [
  "chrono",
  "proc-macro2",
@@ -5120,6 +5118,7 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "ts-rs",
+ "uuid",
  "validator",
  "wiremock",
 ]
