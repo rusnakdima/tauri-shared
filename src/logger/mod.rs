@@ -7,13 +7,52 @@ use std::sync::OnceLock;
 use std::sync::{Arc, RwLock};
 
 static LOGGER: OnceLock<Logger> = OnceLock::new();
+static LOG_LEVEL: OnceLock<RwLock<LogLevel>> = OnceLock::new();
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 pub enum LogLevel {
     Debug,
     Info,
     Warn,
     Error,
+}
+
+impl LogLevel {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "debug" => Some(LogLevel::Debug),
+            "info" => Some(LogLevel::Info),
+            "warn" | "warning" => Some(LogLevel::Warn),
+            "error" => Some(LogLevel::Error),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            LogLevel::Debug => "debug",
+            LogLevel::Info => "info",
+            LogLevel::Warn => "warn",
+            LogLevel::Error => "error",
+        }
+    }
+
+    /// Returns true if this level should be logged given the current minimum level
+    pub fn is_enabled(&self, min_level: LogLevel) -> bool {
+        let self_val = match self {
+            LogLevel::Debug => 0,
+            LogLevel::Info => 1,
+            LogLevel::Warn => 2,
+            LogLevel::Error => 3,
+        };
+        let min_val = match min_level {
+            LogLevel::Debug => 0,
+            LogLevel::Info => 1,
+            LogLevel::Warn => 2,
+            LogLevel::Error => 3,
+        };
+        self_val >= min_val
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -50,7 +89,30 @@ impl Logger {
         LOGGER.get_or_init(|| Logger::new(1000))
     }
 
+    /// Get the global log level filter
+    pub fn global_level() -> &'static RwLock<LogLevel> {
+        LOG_LEVEL.get_or_init(|| RwLock::new(LogLevel::Info))
+    }
+
+    /// Set the global log level filter
+    pub fn set_level(level: LogLevel) {
+        if let Ok(mut guard) = Self::global_level().write() {
+            *guard = level;
+        }
+    }
+
+    /// Get the current global log level
+    pub fn get_level() -> LogLevel {
+        Self::global_level().read().unwrap().clone()
+    }
+
     pub fn log(&self, level: LogLevel, message: &str, source: Option<&str>) {
+        // Check if this level should be logged based on current minimum level
+        let min_level = Self::get_level();
+        if !level.is_enabled(min_level) {
+            return; // Skip logging below the minimum level
+        }
+
         let entry = LogEntry {
             level,
             message: message.to_string(),
