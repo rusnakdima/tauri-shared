@@ -3,7 +3,7 @@
     {
       "name": "quick_sort",
       "category": "sorting",
-      "description": "QuickSort implementation using median-of-three pivot selection",
+      "description": "QuickSort implementation with middle-element pivot selection",
       "time_complexity": "O(n log n) average, O(n^2) worst",
       "space_complexity": "O(log n)",
       "stable": false
@@ -17,6 +17,22 @@
       "stable": true
     },
     {
+      "name": "bubble_sort",
+      "category": "sorting",
+      "description": "BubbleSort implementation with O(n^2) comparison-based sorting",
+      "time_complexity": "O(n^2)",
+      "space_complexity": "O(1)",
+      "stable": true
+    },
+    {
+      "name": "insertion_sort",
+      "category": "sorting",
+      "description": "InsertionSort implementation with O(n^2) adaptive sorting",
+      "time_complexity": "O(n^2)",
+      "space_complexity": "O(1)",
+      "stable": true
+    },
+    {
       "name": "dijkstra",
       "category": "graph",
       "description": "Dijkstra's shortest path algorithm for weighted directed graphs",
@@ -25,6 +41,6 @@
       "stable": true
     }
   ],
-  "sorting_algorithms": ["quick_sort", "merge_sort"],
+  "sorting_algorithms": ["quick_sort", "merge_sort", "bubble_sort", "insertion_sort"],
   "graph_algorithms": ["dijkstra"]
 }

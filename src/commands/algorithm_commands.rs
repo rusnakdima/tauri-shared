@@ -38,7 +38,6 @@ fn json_quick_sort(arr: &[serde_json::Value]) -> Vec<serde_json::Value> {
         return arr.to_vec();
     }
     let pivot = arr[arr.len() / 2].clone();
-    let pivot_ord = json_ord(&pivot, &pivot);
     let left: Vec<serde_json::Value> = arr
         .iter()
         .filter(|x| json_ord(x, &pivot) == std::cmp::Ordering::Less)
@@ -46,7 +45,7 @@ fn json_quick_sort(arr: &[serde_json::Value]) -> Vec<serde_json::Value> {
         .collect();
     let middle: Vec<serde_json::Value> = arr
         .iter()
-        .filter(|x| json_ord(x, &pivot) == pivot_ord)
+        .filter(|x| json_ord(x, &pivot) == std::cmp::Ordering::Equal)
         .cloned()
         .collect();
     let right: Vec<serde_json::Value> = arr
@@ -88,6 +87,33 @@ fn json_merge(left: &[serde_json::Value], right: &[serde_json::Value]) -> Vec<se
     result
 }
 
+fn json_bubble_sort(arr: &[serde_json::Value]) -> Vec<serde_json::Value> {
+    let mut result: Vec<serde_json::Value> = arr.to_vec();
+    let n = result.len();
+    for i in 0..n {
+        for j in 0..n - i - 1 {
+            if json_ord(&result[j], &result[j + 1]) == std::cmp::Ordering::Greater {
+                result.swap(j, j + 1);
+            }
+        }
+    }
+    result
+}
+
+fn json_insertion_sort(arr: &[serde_json::Value]) -> Vec<serde_json::Value> {
+    let mut result: Vec<serde_json::Value> = arr.to_vec();
+    for i in 1..result.len() {
+        let key = result[i].clone();
+        let mut j = i;
+        while j > 0 && json_ord(&result[j - 1], &key) == std::cmp::Ordering::Greater {
+            result[j] = result[j - 1].clone();
+            j -= 1;
+        }
+        result[j] = key;
+    }
+    result
+}
+
 #[tauri::command]
 pub fn quick_sort(arr: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, String> {
     Ok(json_quick_sort(&arr))
@@ -96,6 +122,16 @@ pub fn quick_sort(arr: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>,
 #[tauri::command]
 pub fn merge_sort(arr: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, String> {
     Ok(json_merge_sort(&arr))
+}
+
+#[tauri::command]
+pub fn bubble_sort(arr: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, String> {
+    Ok(json_bubble_sort(&arr))
+}
+
+#[tauri::command]
+pub fn insertion_sort(arr: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, String> {
+    Ok(json_insertion_sort(&arr))
 }
 
 #[cfg(feature = "algorithms")]

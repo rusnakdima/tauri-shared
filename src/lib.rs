@@ -21,7 +21,7 @@ pub mod validation;
 pub mod algorithms;
 
 pub use commands::{
-    algorithm_commands::{dijkstra, merge_sort, quick_sort},
+    algorithm_commands::{bubble_sort, dijkstra, insertion_sort, merge_sort, quick_sort},
     db_delete_schema, db_get_all_schemas, db_get_schema, db_save_schema,
     logger_commands::{
         clear_logs, get_log_entries, get_log_level, set_log_level, write_log_to_file,

@@ -36,16 +36,16 @@ pub fn create_graph() {
 }
 
 #[cfg(not(feature = "algorithms"))]
-pub fn add_node() {
+pub fn add_node(_label: &str) {
     panic!("algorithms feature not enabled");
 }
 
 #[cfg(not(feature = "algorithms"))]
-pub fn add_edge() {
+pub fn add_edge(_from: usize, _to: usize, _weight: f64) {
     panic!("algorithms feature not enabled");
 }
 
 #[cfg(not(feature = "algorithms"))]
-pub fn dijkstra_shortest_path() {
+pub fn dijkstra_shortest_path() -> std::collections::HashMap<usize, f64> {
     panic!("algorithms feature not enabled");
 }
