@@ -2,6 +2,12 @@ use crate::log_info;
 use reqwest::Client;
 use serde_json::Value;
 
+// Designer MongoDB connection constants for schema sync
+// Note: This is the REST API endpoint, not the native MongoDB port
+const DESIGNER_MONGODB_URI: &str = "http://localhost:3000";
+const DESIGNER_DATABASE: &str = "designer_db";
+const SCHEMA_COLLECTION: &str = "schemas";
+
 pub struct MongoBridge {
     endpoint: String,
     client: Client,
@@ -15,8 +21,23 @@ impl MongoBridge {
         }
     }
 
+    /// Create a MongoBridge connected to the Designer database
+    pub fn designer() -> Self {
+        Self::new(DESIGNER_MONGODB_URI)
+    }
+
+    /// Get the Designer database name
+    pub fn designer_database() -> &'static str {
+        DESIGNER_DATABASE
+    }
+
+    /// Get the schema collection name
+    pub fn schema_collection() -> &'static str {
+        SCHEMA_COLLECTION
+    }
+
     pub async fn insert(&self, collection: &str, id: &str, doc: Value) -> Result<(), String> {
-        let url = format!("{}/{}", self.endpoint, collection);
+        let url = format!("{}/{}/{}", self.endpoint, collection, id);
         self.client
             .post(&url)
             .json(&doc)
@@ -48,6 +69,22 @@ impl MongoBridge {
             .map_err(|e| e.to_string())?;
         log_info!("MongoDB delete: {}/{}", collection, id);
         Ok(())
+    }
+
+    /// Fetch a schema by ID from the Designer database
+    pub async fn fetch_schema(&self, schema_id: &str) -> Result<Value, String> {
+        let url = format!("{}/{}/{}", self.endpoint, SCHEMA_COLLECTION, schema_id);
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?
+            .json::<Value>()
+            .await
+            .map_err(|e| e.to_string())?;
+        log_info!("Fetched schema {} from Designer", schema_id);
+        Ok(response)
     }
 }
 

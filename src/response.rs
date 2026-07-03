@@ -66,6 +66,14 @@ impl<T> Response<T> {
         }
     }
 
+    pub fn error_with_data(message: impl Into<String>, data: T) -> Self {
+        Self {
+            status: Status::Error,
+            message: message.into(),
+            data: Some(data),
+        }
+    }
+
     pub fn validation_error(message: impl Into<String>) -> Self {
         Self {
             status: Status::ValidationError,
