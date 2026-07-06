@@ -63,5 +63,27 @@ pub fn schema_ts_bindings() -> String {
     bindings.push_str(&crate::schema::TailwindResponsiveClasses::inline());
     bindings.push('\n');
 
+    // Runtime schema types (in src/schema/runtime.rs)
+    bindings.push_str(&crate::schema::runtime::RenderedPage::inline());
+    bindings.push('\n');
+    bindings.push_str(&crate::schema::runtime::RenderedSection::inline());
+    bindings.push('\n');
+    bindings.push_str(&crate::schema::runtime::RenderedElement::inline());
+    bindings.push('\n');
+    bindings.push_str(&crate::schema::runtime::RenderedCanvasElement::inline());
+    bindings.push('\n');
+    bindings.push_str(&crate::schema::runtime::ValidationResult::inline());
+    bindings.push('\n');
+    bindings.push_str(&crate::schema::runtime::ValidationError::inline());
+    bindings.push('\n');
+    bindings.push_str(&crate::schema::runtime::EventSignature::inline());
+    bindings.push('\n');
+
+    // Runtime router types (in src/runtime/router.rs)
+    bindings.push_str(&crate::runtime::RouteConfig::inline());
+    bindings.push('\n');
+    bindings.push_str(&crate::runtime::RouteMatch::inline());
+    bindings.push('\n');
+
     bindings
 }

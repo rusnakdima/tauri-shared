@@ -57,13 +57,13 @@ SignalStore + JsonDb (tauri-shared/src/storage/)
 | `src/error.rs` | `AppError` enum |
 | `src/result.rs` | `Result<T>` type alias |
 
-### What's Missing for Runtime SDUI
+### Runtime SDUI — Current Implementation
 
-1. **Runtime engine** (`src/runtime/`) — no `SduiEngine`, `SchemaRouter`, `BindingResolver`, or validation logic
-2. **SDUI Tauri commands** — no `sdui_*` commands for schema loading, binding resolution, event dispatching, page rendering, or theme application
-3. **Runtime schema types** — no `RenderedPage`, `ValidationResult`, `ValidationError`, `EventSignature`
-4. **Module registration** — `src/lib.rs` does not export the new `runtime` or `sdui_commands` modules
-5. **TypeScript bindings for runtime types** — runtime structs need `#[derive(TS)]` for Angular consumption
+1. **Runtime engine** (`src/runtime/`) — ✅ `SduiEngine`, `SchemaRouter`, `BindingResolver`, and validation logic all implemented
+2. **SDUI Tauri commands** (`src/commands/sdui_commands.rs`) — ✅ all `sdui_*` commands implemented
+3. **Runtime schema types** (`src/schema/runtime.rs`) — ✅ `RenderedPage`, `ValidationResult`, `ValidationError`, `EventSignature` all implemented (NOTE: in `src/schema/runtime.rs`, not `src/runtime/`)
+4. **Module registration** — ✅ `src/lib.rs` exports the `runtime` module and re-exports all types
+5. **TypeScript bindings** — ✅ all runtime structs have `#[derive(TS)]`
 
 ---
 
@@ -75,25 +75,21 @@ SignalStore + JsonDb (tauri-shared/src/storage/)
 //! Runtime SDUI engine module.
 //!
 //! Provides the core [`SduiEngine`], [`SchemaRouter`], [`BindingResolver`],
-//! and schema validation types used by all 8 Tauri apps.
+//! and validation functions. Runtime schema types are in `src/schema/runtime.rs`.
 
-mod engine;
-mod router;
-mod bindings;
-mod validation;
-
-pub mod schema_types {
-    mod rendered_page;
-    mod validation_result;
-    mod event_signature;
-}
+pub mod engine;
+pub mod router;
+pub mod bindings;
+pub mod validation;
 
 pub use engine::{SduiEngine, Callable, GuardFn, MiddlewareFn};
 pub use router::{SchemaRouter, RouteConfig};
 pub use bindings::BindingResolver;
 pub use validation::{validate_schema, validate_page, validate_component};
-pub use schema_types::{
-    RenderedPage, ValidationResult, ValidationError, EventSignature,
+// schema types (RenderedPage, ValidationResult, etc.) are in src/schema/runtime.rs
+pub use schema::runtime::{
+    RenderedPage, RenderedSection, RenderedElement, RenderedCanvasElement,
+    ValidationResult, ValidationError, EventSignature,
 };
 ```
 
@@ -294,7 +290,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::runtime::engine::{GuardFn, MiddlewareFn, SduiEngine};
-use crate::runtime::schema_types::RenderedPage;
+use crate::schema::runtime::RenderedPage;
 use crate::Result;
 
 use super::engine::Callable;
@@ -442,7 +438,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::runtime::engine::Callable;
-use crate::runtime::schema_types::RenderedPage;
+use crate::schema::runtime::RenderedPage;
 use crate::schema::{CanvasElement, DataBinding};
 use crate::storage::SignalStore;
 use crate::Result;
@@ -570,7 +566,7 @@ use ts_rs::TS;
 use crate::schema::{
     UiSchema, Page, ComponentDef, CanvasElement, Layout, ServiceDef, ModuleDef,
 };
-use crate::runtime::schema_types::{ValidationResult, ValidationError};
+use crate::schema::runtime::{ValidationResult, ValidationError};
 
 /// Validates a complete [`UiSchema`].
 ///
@@ -793,8 +789,8 @@ use nosql_orm::provider::DatabaseProvider;
 
 use crate::runtime::{
     SduiEngine, SchemaRouter, BindingResolver, validate_schema, validate_page,
-    schema_types::{RenderedPage, ValidationResult},
 };
+use crate::schema::runtime::{RenderedPage, ValidationResult};
 use crate::schema::{UiSchema, Page};
 use crate::storage::{SignalStore, JsonDb};
 use crate::{AppError, Result};
@@ -941,238 +937,101 @@ pub fn sdui_apply_theme(
 
 ---
 
-### 3g. `src/runtime/schema_types/mod.rs` (and submodules)
+### 3g. `src/schema/runtime.rs` (runtime types — inline, not a separate module)
 
-**`src/runtime/schema_types/rendered_page.rs`**:
+**`src/schema/runtime.rs`** — All runtime types are defined inline in this file (not split into submodules):
 
+**`RenderedPage`** (line 11):
 ```rust
-use std::collections::HashMap;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use ts_rs::TS;
-
-use crate::schema::{Page, CanvasElement, GridPosition};
-
-/// A fully resolved, data-bound page ready for Angular rendering.
-///
-/// Produced by [`super::router::SchemaRouter::resolve`].
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct RenderedPage {
-    pub id: String,
+    pub page_id: String,          // NOTE: field is `page_id`, not `id`
     pub name: String,
     pub route: String,
     #[serde(default)]
-    pub meta: crate::schema::PageMeta,
+    pub meta: PageMeta,
     pub layout_id: Option<String>,
     #[serde(default)]
     pub sections: HashMap<String, RenderedSection>,
     #[serde(default)]
-    pub canvas_elements: Vec<RenderedCanvasElement>,
-    #[serde(default)]
+    pub canvas_elements: Vec<RenderedElement>,  // NOTE: type is `RenderedElement`, not `RenderedCanvasElement`
+    #[serde(default, skip)]
     pub resolved_bindings: HashMap<String, serde_json::Value>,
 }
+```
 
-impl RenderedPage {
-    /// Constructs a `RenderedPage` from a source [`Page`] and optional layout ID.
-    pub fn from_page(page: &Page, layout_id: Option<&str>) -> Self {
-        Self {
-            id: page.id.clone(),
-            name: page.name.clone(),
-            route: page.route.clone(),
-            meta: page.meta.clone(),
-            layout_id: layout_id.map(String::from),
-            sections: page
-                .sections
-                .iter()
-                .map(|(k, v)| (k.clone(), RenderedSection::from(v.clone())))
-                .collect(),
-            canvas_elements: page
-                .canvas_elements
-                .iter()
-                .map(RenderedCanvasElement::from)
-                .collect(),
-            resolved_bindings: HashMap::new(),
-        }
-    }
-
-    /// Sets a resolved binding for `key`.
-    pub fn set_binding(&mut self, key: String, value: serde_json::Value) {
-        self.resolved_bindings.insert(key, value);
-    }
-
-    /// Returns the resolved binding for `key`, if any.
-    pub fn get_binding(&self, key: &str) -> Option<&serde_json::Value> {
-        self.resolved_bindings.get(key)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
+**`RenderedSection`** (line 62):
+```rust
 pub struct RenderedSection {
     #[serde(default)]
     pub component_id: Option<String>,
-    #[serde(default = "true")]
+    #[serde(default = "default_visible")]
     pub visible: bool,
     #[serde(default)]
     pub dynamic: bool,
 }
+```
 
-impl From<crate::schema::PageSection> for RenderedSection {
-    fn from(s: crate::schema::PageSection) -> Self {
-        Self {
-            component_id: s.component_id,
-            visible: s.visible,
-            dynamic: s.dynamic,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct RenderedCanvasElement {
+**`RenderedElement`** (line 88) — used in `RenderedPage.canvas_elements`:
+```rust
+pub struct RenderedElement {
     pub id: String,
     pub component_id: String,
     #[serde(default)]
     pub grid_position: GridPosition,
-    #[serde(default)]
+    #[serde(default, skip)]
     pub props: HashMap<String, serde_json::Value>,
-    #[serde(default)]
+    #[serde(default, skip)]
     pub resolved_props: Option<serde_json::Value>,
     #[serde(default)]
     pub classes: String,
     #[serde(default)]
     pub children: Vec<String>,
     #[serde(default)]
-    pub data_binding: Option<crate::schema::DataBinding>,
-}
-
-impl From<&CanvasElement> for RenderedCanvasElement {
-    fn from(e: &CanvasElement) -> Self {
-        Self {
-            id: e.id.clone(),
-            component_id: e.component_id.clone(),
-            grid_position: e.grid_position.clone(),
-            props: e.props.clone(),
-            resolved_props: None,
-            classes: e.classes.clone(),
-            children: e.children.clone(),
-            data_binding: e.data_binding.clone(),
-        }
-    }
+    pub data_binding: Option<DataBinding>,
 }
 ```
 
-**`src/runtime/schema_types/validation_result.rs`**:
-
+**`RenderedCanvasElement`** (line 125) — standalone variant with full props preserved:
 ```rust
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+pub struct RenderedCanvasElement {
+    pub id: String,
+    pub component_id: String,
+    #[serde(default)]
+    pub grid_position: GridPosition,
+    #[serde(default, skip)]
+    pub props: HashMap<String, serde_json::Value>,
+    // ...
+}
+```
 
-use super::ValidationError;
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
+**`ValidationResult`** (line 162):
+```rust
 pub struct ValidationResult {
     pub valid: bool,
     pub errors: Vec<ValidationError>,
 }
-
-impl ValidationResult {
-    pub fn valid() -> Self {
-        Self {
-            valid: true,
-            errors: vec![],
-        }
-    }
-
-    pub fn invalid(errors: Vec<ValidationError>) -> Self {
-        Self {
-            valid: false,
-            errors,
-        }
-    }
-}
 ```
 
-**`src/runtime/schema_types/validation_error.rs`**:
-
+**`ValidationError`** (line 186):
 ```rust
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use ts_rs::TS;
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct ValidationError {
-    /// Dot-notation path to the invalid field (e.g. `"pages.main.layout"`).
-    pub path: String,
-    /// Human-readable error message.
+    pub path: String,           // NOTE: field is `severity`, not `error_type`
     pub message: String,
-    /// Error category: `"required"`, `"reference"`, `"value"`, `"duplicate"`.
-    pub error_type: String,
+    pub severity: String,       // e.g. "error", "warning"
 }
 ```
 
-**`src/runtime/schema_types/event_signature.rs`**:
-
+**`EventSignature`** (line 205):
 ```rust
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use ts_rs::TS;
-
-use crate::schema::ComponentEvent;
-
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct EventSignature {
     pub name: String,
+    #[serde(default)]
     pub description: Option<String>,
+    #[serde(default)]
     pub payload_type: Option<String>,
+    #[serde(default)]
     pub return_type: Option<String>,
 }
-
-impl EventSignature {
-    pub fn from_component_event(event: &ComponentEvent) -> Self {
-        Self {
-            name: event.name.clone(),
-            description: event.description.clone(),
-            payload_type: None,
-            return_type: None,
-        }
-    }
-
-    pub fn with_payload_type(mut self, payload_type: String) -> Self {
-        self.payload_type = Some(payload_type);
-        self
-    }
-
-    pub fn with_return_type(mut self, return_type: String) -> Self {
-        self.return_type = Some(return_type);
-        self
-    }
-}
-```
-
-**`src/runtime/schema_types/mod.rs`**:
-
-```rust
-mod rendered_page;
-mod validation_result;
-mod validation_error;
-mod event_signature;
-
-pub use rendered_page::{RenderedPage, RenderedSection, RenderedCanvasElement};
-pub use validation_result::ValidationResult;
-pub use validation_error::ValidationError;
-pub use event_signature::EventSignature;
 ```
 
 ---
@@ -1297,22 +1156,22 @@ If additional runtime needs emerge (e.g., a JSON pointer library), they should b
 | `validate_page` | fn | Validates a single Page; returns `Result<Vec<ValidationError>>` |
 | `validate_component` | fn | Validates a single ComponentDef; returns ValidationResult |
 
-### Module: `runtime::schema_types`
+### Module: `schema::runtime` (in `src/schema/runtime.rs` — not `src/runtime/`)
 
 | Item | Type | Description |
 |---|---|---|
-| `RenderedPage` | struct | Fully resolved, data-bound page |
+| `RenderedPage` | struct | Fully resolved, data-bound page (`page_id` field, not `id`) |
 | `RenderedSection` | struct | Resolved page section |
-| `RenderedCanvasElement` | struct | Resolved canvas element with resolved props |
+| `RenderedElement` | struct | Resolved element used in `RenderedPage.canvas_elements` |
+| `RenderedCanvasElement` | struct | Standalone variant with full props |
 | `ValidationResult` | struct | `{ valid: bool, errors: Vec<ValidationError> }` |
-| `ValidationError` | struct | `{ path, message, error_type }` |
+| `ValidationError` | struct | `{ path, message, severity }` (NOTE: field is `severity`, not `error_type`) |
 | `EventSignature` | struct | Component event metadata |
 | `RenderedPage::from_page` | fn | Constructs RenderedPage from Page |
 | `RenderedPage::set_binding` | fn | Sets a resolved binding |
 | `RenderedPage::get_binding` | fn | Gets a resolved binding |
 | `ValidationResult::valid` | fn | Constructor for a valid result |
 | `ValidationResult::invalid` | fn | Constructor for an invalid result |
-| `EventSignature::from_component_event` | fn | Converts ComponentEvent to EventSignature |
 | `EventSignature::with_payload_type` | fn | Builder method |
 | `EventSignature::with_return_type` | fn | Builder method |
 
@@ -1339,11 +1198,7 @@ If additional runtime needs emerge (e.g., a JSON pointer library), they should b
 | `src/runtime/router.rs` | **CREATE** — `SchemaRouter`, `RouteConfig` |
 | `src/runtime/bindings.rs` | **CREATE** — `BindingResolver`, `ResolveBindings` trait |
 | `src/runtime/validation.rs` | **CREATE** — `validate_schema`, `validate_page`, `validate_component` |
-| `src/runtime/schema_types/mod.rs` | **CREATE** — re-exports all schema types |
-| `src/runtime/schema_types/rendered_page.rs` | **CREATE** — `RenderedPage`, `RenderedSection`, `RenderedCanvasElement` |
-| `src/runtime/schema_types/validation_result.rs` | **CREATE** — `ValidationResult` |
-| `src/runtime/schema_types/validation_error.rs` | **CREATE** — `ValidationError` |
-| `src/runtime/schema_types/event_signature.rs` | **CREATE** — `EventSignature` |
+| `src/schema/runtime.rs` | **ALREADY EXISTS** — `RenderedPage`, `RenderedSection`, `RenderedElement`, `RenderedCanvasElement`, `ValidationResult`, `ValidationError`, `EventSignature` (NOTE: not in `src/runtime/`, but in `src/schema/runtime.rs`) |
 | `src/commands/sdui_commands.rs` | **CREATE** — 6 `#[tauri::command]` functions + `SduiEngineState` |
 | `src/commands/mod.rs` | **UPDATE** — add `pub mod sdui_commands;` |
 | `src/lib.rs` | **UPDATE** — add `pub mod runtime;`, update `pub use commands::`, add `pub use runtime::*;` |
