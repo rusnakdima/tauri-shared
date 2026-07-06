@@ -66,7 +66,7 @@ impl<T> Response<T> {
         }
     }
 
-    pub fn error_with_data(message: impl Into<String>, data: T) -> Self {
+    pub fn error_with_data(data: T, message: impl Into<String>) -> Self {
         Self {
             status: Status::Error,
             message: message.into(),

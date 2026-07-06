@@ -48,7 +48,9 @@ pub async fn save_schema_local(
     }
 }
 
+// TODO: implement cloud sync via MongoBridge once designer endpoint contract is finalized.
 #[tauri::command]
+#[deprecated(note = "Cloud sync not yet implemented — returns NotFound. Use Designer to manage schemas.")]
 pub async fn sync_schema_from_cloud(
     _app_id: String,
     _designer_endpoint: String,

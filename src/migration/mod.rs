@@ -1,34 +1,5 @@
-use nosql_orm::prelude::{DatabaseProvider, Entity};
-use std::sync::Arc;
+pub mod error;
+pub mod migration;
 
-pub struct Migration;
-
-impl Migration {
-    pub async fn auto_migrate<P, E>(
-        _provider: Arc<P>,
-        _entities: &[E],
-    ) -> Result<(), MigrationError>
-    where
-        P: DatabaseProvider + 'static,
-        E: Entity + Send + Sync + 'static,
-    {
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub enum MigrationError {
-    Provider(String),
-    Entity(String),
-}
-
-impl std::fmt::Display for MigrationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MigrationError::Provider(msg) => write!(f, "Migration error: {}", msg),
-            MigrationError::Entity(msg) => write!(f, "Migration error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for MigrationError {}
+pub use error::MigrationError;
+pub use migration::Migration;

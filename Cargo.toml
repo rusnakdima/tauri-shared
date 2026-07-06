@@ -7,7 +7,6 @@ edition = "2021"
 tauri = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-thiserror = "1"
 proc-macro2 = "1"
 quote = "1"
 syn = "1"
@@ -15,10 +14,12 @@ schemars = { version = "0.8", features = ["derive"] }
 validator = { version = "0.16", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["rt", "sync"] }
 nosql_orm = { path = "../nosql_orm", features = ["json"] }
 petgraph = { version = "0.6", optional = true }
 ts-rs = "6"
 uuid = { version = "1", features = ["v4", "serde"] }
+argon2 = "0.5"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt"] }

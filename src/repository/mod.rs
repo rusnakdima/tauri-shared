@@ -1,6 +1,3 @@
-use nosql_orm::prelude::Entity;
-use serde::{de::DeserializeOwned, Serialize};
+pub mod kernel_repository;
 
-pub trait KernelRepository: Entity + Serialize + DeserializeOwned + Send + Sync + 'static {}
-
-impl<T: Entity + Serialize + DeserializeOwned + Send + Sync + 'static> KernelRepository for T {}
+pub use kernel_repository::KernelRepository;
