@@ -5,4 +5,3 @@ pub mod schema_sync;
 pub use local_first::{SyncEngine, SyncOperation, SyncQueue};
 pub use mongo_bridge::MongoBridge;
 pub use schema_sync::SchemaSyncService;
-pub use schema_sync::*;

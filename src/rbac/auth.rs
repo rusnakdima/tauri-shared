@@ -1,17 +1,25 @@
 use crate::rbac::{AppUser, Session};
 use crate::AppError;
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
 use nosql_orm::provider::DatabaseProvider;
 
-pub fn hash_password(password: &str) -> String {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    let mut hasher = DefaultHasher::new();
-    password.hash(&mut hasher);
-    format!("zenith_hash_{}", hasher.finish())
+pub fn hash_password(password: &str) -> Result<String, AppError> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    let password_hash = argon2
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    Ok(password_hash.to_string())
 }
 
-pub fn verify_password(password: &str, hash: &str) -> bool {
-    hash_password(password) == hash
+pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
+    let parsed_hash = PasswordHash::new(hash).map_err(|e| AppError::Internal(e.to_string()))?;
+    Ok(Argon2::default()
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok())
 }
 
 fn generate_token(user_id: &str, username: &str) -> String {
@@ -43,7 +51,7 @@ pub async fn login(
         .find(|u| u.username == username)
         .ok_or_else(|| AppError::Unauthorized)?;
 
-    if !verify_password(&password, &user.password_hash) {
+    if !verify_password(&password, &user.password_hash)? {
         return Err(AppError::Unauthorized);
     }
 
@@ -118,7 +126,7 @@ pub async fn register(
 
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let password_hash = hash_password(&password);
+    let password_hash = hash_password(&password)?;
 
     let user = AppUser {
         id: id.clone(),

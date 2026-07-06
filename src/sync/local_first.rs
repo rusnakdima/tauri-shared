@@ -1,3 +1,9 @@
+use crate::sync::MongoBridge;
+use crate::AppError;
+use crate::Result;
+use nosql_orm::prelude::DatabaseProvider;
+use nosql_orm::prelude::SchemaIntrospection;
+use nosql_orm::providers::json::JsonProvider;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -86,13 +92,13 @@ impl Default for SyncQueue {
 
 pub struct SyncEngine {
     queue: SyncQueue,
-    local_db: crate::storage::JsonDb,
-    mongo_bridge: Option<crate::sync::MongoBridge>,
+    local_db: JsonProvider,
+    mongo_bridge: Option<MongoBridge>,
     last_sync_state: RwLock<LastSyncState>,
 }
 
 impl SyncEngine {
-    pub fn new(local_db: crate::storage::JsonDb) -> Self {
+    pub fn new(local_db: JsonProvider) -> Self {
         Self {
             queue: SyncQueue::new(),
             local_db,
@@ -101,7 +107,7 @@ impl SyncEngine {
         }
     }
 
-    pub fn set_mongo_bridge(&mut self, bridge: crate::sync::MongoBridge) {
+    pub fn set_mongo_bridge(&mut self, bridge: MongoBridge) {
         self.mongo_bridge = Some(bridge);
     }
 
@@ -109,9 +115,11 @@ impl SyncEngine {
         self.queue.push(op);
     }
 
-    pub async fn sync_to_cloud(&self) -> Result<(), String> {
+    pub async fn sync_to_cloud(&self) -> Result<()> {
         let Some(ref bridge) = self.mongo_bridge else {
-            return Err("MongoDB bridge not configured".to_string());
+            return Err(AppError::Internal(
+                "MongoDB bridge not configured".to_string(),
+            ));
         };
 
         let now = std::time::SystemTime::now()
@@ -122,17 +130,31 @@ impl SyncEngine {
         let old_sync_state = self.last_sync_state.read().unwrap().clone();
         let mut new_sync_state: LastSyncState = HashMap::new();
 
-        let collections = self.local_db.collections();
-        for collection in collections {
-            let docs = self.local_db.find_all_with_id(&collection);
+        let collections_meta = self
+            .local_db
+            .list_collections()
+            .await
+            .map_err(AppError::from)?;
+        for coll_meta in collections_meta {
+            let collection = &coll_meta.name;
+            let docs = self
+                .local_db
+                .find_all(collection)
+                .await
+                .map_err(AppError::from)?;
             let mut coll_sync = HashMap::new();
 
-            for (id, doc) in docs {
+            for doc in docs {
+                let id = doc
+                    .get("id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 let id_clone = id.clone();
                 let doc_clone = doc.clone();
 
                 let old_doc = old_sync_state
-                    .get(&collection)
+                    .get(collection)
                     .and_then(|c| c.get(&id_clone));
 
                 if old_doc.map_or(true, |old| old != &doc_clone) {
@@ -156,7 +178,7 @@ impl SyncEngine {
                 coll_sync.insert(id_clone, doc_clone);
             }
 
-            new_sync_state.insert(collection, coll_sync);
+            new_sync_state.insert(collection.clone(), coll_sync);
         }
 
         for (collection, old_docs) in &old_sync_state {
@@ -193,7 +215,10 @@ impl SyncEngine {
                     doc,
                     ..
                 } => {
-                    bridge.insert(&collection, &id, doc).await?;
+                    bridge
+                        .insert(&collection, &id, doc)
+                        .await
+                        .map_err(|e| AppError::Internal(e))?;
                 }
                 SyncOperation::Update {
                     collection,
@@ -201,10 +226,16 @@ impl SyncEngine {
                     doc,
                     ..
                 } => {
-                    bridge.update(&collection, &id, doc).await?;
+                    bridge
+                        .update(&collection, &id, doc)
+                        .await
+                        .map_err(|e| AppError::Internal(e))?;
                 }
                 SyncOperation::Delete { collection, id, .. } => {
-                    bridge.delete(&collection, &id).await?;
+                    bridge
+                        .delete(&collection, &id)
+                        .await
+                        .map_err(|e| AppError::Internal(e))?;
                 }
             }
         }

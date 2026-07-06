@@ -58,7 +58,7 @@ pub async fn sync_to_cloud(engine: tauri::State<'_, Arc<SyncEngine>>) -> Result<
     engine
         .sync_to_cloud()
         .await
-        .map_err(|e| AppError::Internal(e))
+        .map_err(|e| AppError::Internal(e.to_string()))
 }
 
 #[tauri::command]

@@ -14,7 +14,7 @@ pub async fn get_schema_local_first(
 ) -> Result<Response<serde_json::Value>, String> {
     let guard = state.service.lock().await;
     if let Some(service) = guard.as_ref() {
-        match service.get_schema_local(&app_id) {
+        match service.get_schema_local(&app_id).await {
             Ok(Some(schema)) => {
                 let json = serde_json::to_value(&schema)
                     .map_err(|e| format!("Failed to serialize: {}", e))?;
@@ -40,6 +40,7 @@ pub async fn save_schema_local(
             .map_err(|e| format!("Invalid schema: {}", e))?;
         service
             .save_schema_local(&app_id, &schema)
+            .await
             .map_err(|e| format!("Failed to save: {}", e))?;
         Ok(Response::success((), Some("Schema saved to local cache")))
     } else {

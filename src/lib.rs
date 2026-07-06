@@ -21,13 +21,18 @@ pub mod validation;
 pub mod algorithms;
 
 pub use commands::{
-    algorithm_commands::{bubble_sort, dijkstra, insertion_sort, merge_sort, quick_sort},
     db_delete_schema, db_get_all_schemas, db_get_schema, db_save_schema,
     logger_commands::{
         clear_logs, get_log_entries, get_log_level, set_log_level, write_log_to_file,
     },
+    schema_commands::{get_ui_schema, save_ui_schema},
     sdui_commands::{check_permission, load_schema, render_page, resolve_binding, sync_to_cloud},
     KernelDb, KernelEntity,
+};
+
+#[cfg(feature = "algorithms")]
+pub use commands::algorithm_commands::{
+    bubble_sort, dijkstra, insertion_sort, merge_sort, quick_sort,
 };
 pub use crud::{CrudFilter, CrudQuery, CrudResult, PaginatedResult};
 pub use error::AppError;
@@ -45,7 +50,7 @@ pub use result::Result;
 pub use runtime::*;
 pub use schema::*;
 pub use storage::{
-    create_json_provider, create_json_provider_with_config, JsonDb, JsonProviderState, SignalStore,
+    create_json_provider, create_json_provider_with_config, JsonProviderState, SignalStore,
 };
 pub use sync::{MongoBridge, SchemaSyncService, SyncEngine, SyncOperation, SyncQueue};
 pub use typescript::{generate_typescript_bindings, schema_ts_bindings, ts_inline, ToTypeScript};

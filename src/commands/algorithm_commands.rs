@@ -1,137 +1,65 @@
+#[cfg(feature = "algorithms")]
 use std::collections::HashMap;
 
 #[cfg(feature = "algorithms")]
 use petgraph::{graph::Graph, graph::NodeIndex, Directed};
 
+#[cfg(feature = "algorithms")]
+use crate::algorithms::sorting::json;
+
+#[cfg(feature = "algorithms")]
 fn json_ord(a: &serde_json::Value, b: &serde_json::Value) -> std::cmp::Ordering {
-    use serde_json::Value::*;
-    match (a, b) {
-        (Null, Null) => std::cmp::Ordering::Equal,
-        (Null, _) => std::cmp::Ordering::Less,
-        (_, Null) => std::cmp::Ordering::Greater,
-        (Bool(false), Bool(false)) => std::cmp::Ordering::Equal,
-        (Bool(false), _) => std::cmp::Ordering::Less,
-        (_, Bool(false)) => std::cmp::Ordering::Greater,
-        (Bool(true), Bool(true)) => std::cmp::Ordering::Equal,
-        (Bool(true), _) => std::cmp::Ordering::Less,
-        (_, Bool(true)) => std::cmp::Ordering::Greater,
-        (Number(na), Number(nb)) => {
-            let (Some(aa), Some(bb)) = (na.as_f64(), nb.as_f64()) else {
-                return std::cmp::Ordering::Equal;
-            };
-            aa.partial_cmp(&bb).unwrap_or(std::cmp::Ordering::Equal)
-        }
-        (Number(_), _) => std::cmp::Ordering::Less,
-        (_, Number(_)) => std::cmp::Ordering::Greater,
-        (String(sa), String(sb)) => sa.cmp(sb),
-        (String(_), _) => std::cmp::Ordering::Less,
-        (_, String(_)) => std::cmp::Ordering::Greater,
-        (Array(_), Array(_)) => std::cmp::Ordering::Equal,
-        (Array(_), _) => std::cmp::Ordering::Less,
-        (_, Array(_)) => std::cmp::Ordering::Greater,
-        (Object(_), Object(_)) => std::cmp::Ordering::Equal,
-    }
+    json::json_ord(a, b)
 }
 
-fn json_quick_sort(arr: &[serde_json::Value]) -> Vec<serde_json::Value> {
-    if arr.len() <= 1 {
-        return arr.to_vec();
-    }
-    let pivot = arr[arr.len() / 2].clone();
-    let left: Vec<serde_json::Value> = arr
-        .iter()
-        .filter(|x| json_ord(x, &pivot) == std::cmp::Ordering::Less)
-        .cloned()
-        .collect();
-    let middle: Vec<serde_json::Value> = arr
-        .iter()
-        .filter(|x| json_ord(x, &pivot) == std::cmp::Ordering::Equal)
-        .cloned()
-        .collect();
-    let right: Vec<serde_json::Value> = arr
-        .iter()
-        .filter(|x| json_ord(x, &pivot) == std::cmp::Ordering::Greater)
-        .cloned()
-        .collect();
-    let mut result = json_quick_sort(&left);
-    result.extend(middle);
-    result.extend(json_quick_sort(&right));
-    result
+#[cfg(feature = "algorithms")]
+fn json_quick_sort(arr: &mut [serde_json::Value]) {
+    json::quick_sort(arr);
 }
 
+#[cfg(feature = "algorithms")]
 fn json_merge_sort(arr: &[serde_json::Value]) -> Vec<serde_json::Value> {
-    if arr.len() <= 1 {
-        return arr.to_vec();
-    }
-    let mid = arr.len() / 2;
-    let left = json_merge_sort(&arr[..mid]);
-    let right = json_merge_sort(&arr[mid..]);
-    json_merge(&left, &right)
+    json::merge_sort(arr)
 }
 
-fn json_merge(left: &[serde_json::Value], right: &[serde_json::Value]) -> Vec<serde_json::Value> {
-    let mut result = Vec::with_capacity(left.len() + right.len());
-    let mut i = 0;
-    let mut j = 0;
-    while i < left.len() && j < right.len() {
-        if json_ord(&left[i], &right[j]) == std::cmp::Ordering::Less {
-            result.push(left[i].clone());
-            i += 1;
-        } else {
-            result.push(right[j].clone());
-            j += 1;
-        }
-    }
-    result.extend_from_slice(&left[i..]);
-    result.extend_from_slice(&right[j..]);
-    result
+#[cfg(feature = "algorithms")]
+fn json_bubble_sort(arr: &mut [serde_json::Value]) {
+    json::bubble_sort(arr);
 }
 
-fn json_bubble_sort(arr: &[serde_json::Value]) -> Vec<serde_json::Value> {
-    let mut result: Vec<serde_json::Value> = arr.to_vec();
-    let n = result.len();
-    for i in 0..n {
-        for j in 0..n - i - 1 {
-            if json_ord(&result[j], &result[j + 1]) == std::cmp::Ordering::Greater {
-                result.swap(j, j + 1);
-            }
-        }
-    }
-    result
-}
-
-fn json_insertion_sort(arr: &[serde_json::Value]) -> Vec<serde_json::Value> {
-    let mut result: Vec<serde_json::Value> = arr.to_vec();
-    for i in 1..result.len() {
-        let key = result[i].clone();
-        let mut j = i;
-        while j > 0 && json_ord(&result[j - 1], &key) == std::cmp::Ordering::Greater {
-            result[j] = result[j - 1].clone();
-            j -= 1;
-        }
-        result[j] = key;
-    }
-    result
+#[cfg(feature = "algorithms")]
+fn json_insertion_sort(arr: &mut [serde_json::Value]) {
+    json::insertion_sort(arr);
 }
 
 #[tauri::command]
+#[cfg(feature = "algorithms")]
 pub fn quick_sort(arr: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, String> {
-    Ok(json_quick_sort(&arr))
+    let mut arr = arr;
+    json_quick_sort(&mut arr);
+    Ok(arr)
 }
 
 #[tauri::command]
+#[cfg(feature = "algorithms")]
 pub fn merge_sort(arr: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, String> {
     Ok(json_merge_sort(&arr))
 }
 
 #[tauri::command]
+#[cfg(feature = "algorithms")]
 pub fn bubble_sort(arr: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, String> {
-    Ok(json_bubble_sort(&arr))
+    let mut arr = arr;
+    json_bubble_sort(&mut arr);
+    Ok(arr)
 }
 
 #[tauri::command]
+#[cfg(feature = "algorithms")]
 pub fn insertion_sort(arr: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>, String> {
-    Ok(json_insertion_sort(&arr))
+    let mut arr = arr;
+    json_insertion_sort(&mut arr);
+    Ok(arr)
 }
 
 #[cfg(feature = "algorithms")]
@@ -158,34 +86,28 @@ fn build_graph(
 }
 
 #[tauri::command]
+#[cfg(feature = "algorithms")]
 pub fn dijkstra(
     adj_list: HashMap<String, Vec<(String, f64)>>,
     start: String,
 ) -> Result<HashMap<String, Option<f64>>, String> {
-    #[cfg(feature = "algorithms")]
-    {
-        use petgraph::algo::dijkstra;
+    use petgraph::algo::dijkstra;
 
-        let (graph, node_indices) = build_graph(&adj_list);
+    let (graph, node_indices) = build_graph(&adj_list);
 
-        let start_idx = node_indices
-            .get(&start)
-            .ok_or_else(|| format!("Start node '{}' not found in graph", start))?;
+    let start_idx = node_indices
+        .get(&start)
+        .ok_or_else(|| format!("Start node '{}' not found in graph", start))?;
 
-        let distances = dijkstra(&graph, *start_idx, None, |e| *e.weight());
+    let distances = dijkstra(&graph, *start_idx, None, |e| *e.weight());
 
-        let result: HashMap<String, Option<f64>> = node_indices
-            .iter()
-            .map(|(name, idx)| {
-                let dist = distances.get(idx).copied();
-                (name.clone(), dist)
-            })
-            .collect();
+    let result: HashMap<String, Option<f64>> = node_indices
+        .iter()
+        .map(|(name, idx)| {
+            let dist = distances.get(idx).copied();
+            (name.clone(), dist)
+        })
+        .collect();
 
-        Ok(result)
-    }
-    #[cfg(not(feature = "algorithms"))]
-    {
-        Err("algorithms feature not enabled".to_string())
-    }
+    Ok(result)
 }

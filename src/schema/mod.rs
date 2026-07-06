@@ -12,7 +12,6 @@ pub mod theme;
 
 pub use app::*;
 pub use component::*;
-pub use entity::*;
 pub use grid::*;
 pub use i18n::*;
 pub use layout::*;

@@ -1,9 +1,10 @@
-use crate::{AppError, UiSchema};
+use crate::{log_info, AppError, Response, UiSchema};
 use nosql_orm::provider::DatabaseProvider;
+use nosql_orm::providers::JsonProvider;
 
 #[tauri::command]
 pub async fn get_schema(
-    db: tauri::State<'_, impl DatabaseProvider>,
+    db: tauri::State<'_, JsonProvider>,
     id: String,
 ) -> Result<UiSchema, AppError> {
     let data = db
@@ -19,7 +20,7 @@ pub async fn get_schema(
 
 #[tauri::command]
 pub async fn save_schema(
-    db: tauri::State<'_, impl DatabaseProvider>,
+    db: tauri::State<'_, JsonProvider>,
     schema: UiSchema,
 ) -> Result<(), AppError> {
     let id = schema.schema_version.clone();
@@ -43,7 +44,7 @@ pub async fn save_schema(
 
 #[tauri::command]
 pub async fn get_all_schemas(
-    db: tauri::State<'_, impl DatabaseProvider>,
+    db: tauri::State<'_, JsonProvider>,
 ) -> Result<Vec<UiSchema>, AppError> {
     let items = db.find_all("schemas").await.map_err(AppError::from)?;
 
@@ -58,10 +59,55 @@ pub async fn get_all_schemas(
 }
 
 #[tauri::command]
-pub async fn delete_schema(
-    db: tauri::State<'_, impl DatabaseProvider>,
+pub async fn get_ui_schema(
+    db: tauri::State<'_, JsonProvider>,
     id: String,
-) -> Result<(), AppError> {
+) -> Result<Response<serde_json::Value>, AppError> {
+    log_info!("get_ui_schema called with id: {}", id);
+    let data = db.find_by_id("schemas", &id).await?;
+    match data {
+        Some(schema_data) => {
+            log_info!(
+                "Schema '{}' found, size: {} bytes",
+                id,
+                schema_data.to_string().len()
+            );
+            Ok(Response::success(schema_data, Some("Schema loaded")))
+        }
+        None => {
+            log_info!("Schema '{}' not found in database", id);
+            Err(AppError::NotFound(format!("Schema '{}' not found", id)))
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn save_ui_schema(
+    db: tauri::State<'_, JsonProvider>,
+    id: String,
+    schema: serde_json::Value,
+) -> Result<Response<()>, AppError> {
+    log_info!("save_ui_schema called with id: {}", id);
+    if db.find_by_id("schemas", &id).await?.is_some() {
+        db.update("schemas", &id, schema).await?;
+        log_info!("Schema '{}' updated", id);
+    } else {
+        let mut doc = schema;
+        if doc
+            .get("id")
+            .and_then(|v| v.as_str())
+            .is_none_or(|s| s.is_empty())
+        {
+            doc["id"] = serde_json::json!(id);
+        }
+        db.insert("schemas", doc).await?;
+        log_info!("Schema '{}' inserted", id);
+    }
+    Ok(Response::success((), Some("Schema saved")))
+}
+
+#[tauri::command]
+pub async fn delete_schema(db: tauri::State<'_, JsonProvider>, id: String) -> Result<(), AppError> {
     db.delete("schemas", &id).await.map_err(AppError::from)?;
     Ok(())
 }
