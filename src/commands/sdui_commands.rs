@@ -11,57 +11,57 @@ pub type SduiEngineState = Arc<std::sync::RwLock<Option<SduiEngine>>>;
 
 #[tauri::command]
 pub async fn load_schema(
-    schema: UiSchema,
-    engine_state: tauri::State<'_, SduiEngineState>,
+  schema: UiSchema,
+  engine_state: tauri::State<'_, SduiEngineState>,
 ) -> Result<UiSchema> {
-    let mut engine = SduiEngine::from(schema.clone());
-    engine.load_schema(schema.clone());
+  let mut engine = SduiEngine::from(schema.clone());
+  engine.load_schema(schema.clone());
 
-    let mut guard = engine_state
-        .write()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-    *guard = Some(engine);
+  let mut guard = engine_state
+    .write()
+    .map_err(|e| AppError::Internal(e.to_string()))?;
+  *guard = Some(engine);
 
-    Ok(schema)
+  Ok(schema)
 }
 
 #[tauri::command]
 pub fn render_page(
-    route: String,
-    engine_state: tauri::State<'_, SduiEngineState>,
+  route: String,
+  engine_state: tauri::State<'_, SduiEngineState>,
 ) -> Result<RenderedPage> {
-    let guard = engine_state
-        .read()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-    let engine = guard
-        .as_ref()
-        .ok_or_else(|| AppError::Internal("Engine not initialized".to_string()))?;
-    engine.render_page(&route)
+  let guard = engine_state
+    .read()
+    .map_err(|e| AppError::Internal(e.to_string()))?;
+  let engine = guard
+    .as_ref()
+    .ok_or_else(|| AppError::Internal("Engine not initialized".to_string()))?;
+  engine.render_page(&route)
 }
 
 #[tauri::command]
 pub fn resolve_binding(
-    binding: DataBinding,
-    engine_state: tauri::State<'_, SduiEngineState>,
+  binding: DataBinding,
+  engine_state: tauri::State<'_, SduiEngineState>,
 ) -> Result<serde_json::Value> {
-    let guard = engine_state
-        .read()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-    let engine = guard
-        .as_ref()
-        .ok_or_else(|| AppError::Internal("Engine not initialized".to_string()))?;
-    engine.resolve_binding(&binding)
+  let guard = engine_state
+    .read()
+    .map_err(|e| AppError::Internal(e.to_string()))?;
+  let engine = guard
+    .as_ref()
+    .ok_or_else(|| AppError::Internal("Engine not initialized".to_string()))?;
+  engine.resolve_binding(&binding)
 }
 
 #[tauri::command]
 pub async fn sync_to_cloud(engine: tauri::State<'_, Arc<SyncEngine>>) -> Result<()> {
-    engine
-        .sync_to_cloud()
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))
+  engine
+    .sync_to_cloud()
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))
 }
 
 #[tauri::command]
 pub fn check_permission(permission: Permission, resource: String, action: String) -> Result<bool> {
-    Ok(permission.matches(&resource, &action))
+  Ok(permission.matches(&resource, &action))
 }

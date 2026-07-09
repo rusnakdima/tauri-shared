@@ -6,158 +6,158 @@ use ts_rs::TS;
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Theme {
-    pub name: String,
-    #[serde(default)]
-    pub label: String,
-    pub colors: ThemeColors,
+  pub name: String,
+  #[serde(default)]
+  pub label: String,
+  pub colors: ThemeColors,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct ThemeColors {
-    #[serde(default = "default_bg_primary")]
-    pub bg_primary: String,
-    #[serde(default = "default_bg_secondary")]
-    pub bg_secondary: String,
-    #[serde(default = "default_bg_tertiary")]
-    pub bg_tertiary: String,
-    #[serde(default = "default_bg_elevated")]
-    pub bg_elevated: String,
-    #[serde(default = "default_bg_hover")]
-    pub bg_hover: String,
-    #[serde(default = "default_text_primary")]
-    pub text_primary: String,
-    #[serde(default = "default_text_secondary")]
-    pub text_secondary: String,
-    #[serde(default = "default_text_muted")]
-    pub text_muted: String,
-    #[serde(default = "default_border")]
-    pub border: String,
-    #[serde(default = "default_border_light")]
-    pub border_light: String,
-    #[serde(default = "default_primary")]
-    pub primary: String,
-    #[serde(default = "default_secondary")]
-    pub secondary: String,
-    #[serde(default = "default_accent")]
-    pub accent: String,
-    #[serde(default = "default_accent_hover")]
-    pub accent_hover: String,
-    #[serde(default = "default_success")]
-    pub success: String,
-    #[serde(default = "default_warning")]
-    pub warning: String,
-    #[serde(default = "default_error")]
-    pub error: String,
+  #[serde(default = "default_bg_primary")]
+  pub bg_primary: String,
+  #[serde(default = "default_bg_secondary")]
+  pub bg_secondary: String,
+  #[serde(default = "default_bg_tertiary")]
+  pub bg_tertiary: String,
+  #[serde(default = "default_bg_elevated")]
+  pub bg_elevated: String,
+  #[serde(default = "default_bg_hover")]
+  pub bg_hover: String,
+  #[serde(default = "default_text_primary")]
+  pub text_primary: String,
+  #[serde(default = "default_text_secondary")]
+  pub text_secondary: String,
+  #[serde(default = "default_text_muted")]
+  pub text_muted: String,
+  #[serde(default = "default_border")]
+  pub border: String,
+  #[serde(default = "default_border_light")]
+  pub border_light: String,
+  #[serde(default = "default_primary")]
+  pub primary: String,
+  #[serde(default = "default_secondary")]
+  pub secondary: String,
+  #[serde(default = "default_accent")]
+  pub accent: String,
+  #[serde(default = "default_accent_hover")]
+  pub accent_hover: String,
+  #[serde(default = "default_success")]
+  pub success: String,
+  #[serde(default = "default_warning")]
+  pub warning: String,
+  #[serde(default = "default_error")]
+  pub error: String,
 }
 
 fn default_bg_primary() -> String {
-    "#ffffff".to_string()
+  "#ffffff".to_string()
 }
 fn default_bg_secondary() -> String {
-    "#f3f4f6".to_string()
+  "#f3f4f6".to_string()
 }
 fn default_bg_tertiary() -> String {
-    "#e5e7eb".to_string()
+  "#e5e7eb".to_string()
 }
 fn default_bg_elevated() -> String {
-    "#ffffff".to_string()
+  "#ffffff".to_string()
 }
 fn default_bg_hover() -> String {
-    "#f3f4f6".to_string()
+  "#f3f4f6".to_string()
 }
 fn default_text_primary() -> String {
-    "#111827".to_string()
+  "#111827".to_string()
 }
 fn default_text_secondary() -> String {
-    "#374151".to_string()
+  "#374151".to_string()
 }
 fn default_text_muted() -> String {
-    "#6b7280".to_string()
+  "#6b7280".to_string()
 }
 fn default_border() -> String {
-    "#d1d5db".to_string()
+  "#d1d5db".to_string()
 }
 fn default_border_light() -> String {
-    "#e5e7eb".to_string()
+  "#e5e7eb".to_string()
 }
 fn default_primary() -> String {
-    "#3b82f6".to_string()
+  "#3b82f6".to_string()
 }
 fn default_secondary() -> String {
-    "#6b7280".to_string()
+  "#6b7280".to_string()
 }
 fn default_accent() -> String {
-    "#10b981".to_string()
+  "#10b981".to_string()
 }
 fn default_accent_hover() -> String {
-    "#059669".to_string()
+  "#059669".to_string()
 }
 fn default_success() -> String {
-    "#22c55e".to_string()
+  "#22c55e".to_string()
 }
 fn default_warning() -> String {
-    "#f59e0b".to_string()
+  "#f59e0b".to_string()
 }
 fn default_error() -> String {
-    "#ef4444".to_string()
+  "#ef4444".to_string()
 }
 
 impl Default for ThemeColors {
-    fn default() -> Self {
-        Self {
-            bg_primary: default_bg_primary(),
-            bg_secondary: default_bg_secondary(),
-            bg_tertiary: default_bg_tertiary(),
-            bg_elevated: default_bg_elevated(),
-            bg_hover: default_bg_hover(),
-            text_primary: default_text_primary(),
-            text_secondary: default_text_secondary(),
-            text_muted: default_text_muted(),
-            border: default_border(),
-            border_light: default_border_light(),
-            primary: default_primary(),
-            secondary: default_secondary(),
-            accent: default_accent(),
-            accent_hover: default_accent_hover(),
-            success: default_success(),
-            warning: default_warning(),
-            error: default_error(),
-        }
+  fn default() -> Self {
+    Self {
+      bg_primary: default_bg_primary(),
+      bg_secondary: default_bg_secondary(),
+      bg_tertiary: default_bg_tertiary(),
+      bg_elevated: default_bg_elevated(),
+      bg_hover: default_bg_hover(),
+      text_primary: default_text_primary(),
+      text_secondary: default_text_secondary(),
+      text_muted: default_text_muted(),
+      border: default_border(),
+      border_light: default_border_light(),
+      primary: default_primary(),
+      secondary: default_secondary(),
+      accent: default_accent(),
+      accent_hover: default_accent_hover(),
+      success: default_success(),
+      warning: default_warning(),
+      error: default_error(),
     }
+  }
 }
 
 pub fn get_light_theme() -> Theme {
-    Theme {
-        name: "light".to_string(),
-        label: "Light".to_string(),
-        colors: ThemeColors::default(),
-    }
+  Theme {
+    name: "light".to_string(),
+    label: "Light".to_string(),
+    colors: ThemeColors::default(),
+  }
 }
 
 pub fn get_dark_theme() -> Theme {
-    Theme {
-        name: "dark".to_string(),
-        label: "Dark".to_string(),
-        colors: ThemeColors {
-            bg_primary: "#0f172a".to_string(),
-            bg_secondary: "#1e293b".to_string(),
-            bg_tertiary: "#334155".to_string(),
-            bg_elevated: "#1e3a5f".to_string(),
-            bg_hover: "#1e4d7b".to_string(),
-            text_primary: "#f1f5f9".to_string(),
-            text_secondary: "#cbd5e1".to_string(),
-            text_muted: "#94a3b8".to_string(),
-            border: "#475569".to_string(),
-            border_light: "#64748b".to_string(),
-            primary: "#3b82f6".to_string(),
-            secondary: "#64748b".to_string(),
-            accent: "#10b981".to_string(),
-            accent_hover: "#059669".to_string(),
-            success: "#22c55e".to_string(),
-            warning: "#f59e0b".to_string(),
-            error: "#ef4444".to_string(),
-        },
-    }
+  Theme {
+    name: "dark".to_string(),
+    label: "Dark".to_string(),
+    colors: ThemeColors {
+      bg_primary: "#0f172a".to_string(),
+      bg_secondary: "#1e293b".to_string(),
+      bg_tertiary: "#334155".to_string(),
+      bg_elevated: "#1e3a5f".to_string(),
+      bg_hover: "#1e4d7b".to_string(),
+      text_primary: "#f1f5f9".to_string(),
+      text_secondary: "#cbd5e1".to_string(),
+      text_muted: "#94a3b8".to_string(),
+      border: "#475569".to_string(),
+      border_light: "#64748b".to_string(),
+      primary: "#3b82f6".to_string(),
+      secondary: "#64748b".to_string(),
+      accent: "#10b981".to_string(),
+      accent_hover: "#059669".to_string(),
+      success: "#22c55e".to_string(),
+      warning: "#f59e0b".to_string(),
+      error: "#ef4444".to_string(),
+    },
+  }
 }
