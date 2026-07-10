@@ -16,10 +16,10 @@ chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1", features = ["rt", "sync"] }
 nosql_orm = { git = "https://github.com/rusnakdima/nosql_orm.git", branch = "main", features = ["json"] }
-petgraph = { version = "0.6", optional = true }
 ts-rs = "6"
 uuid = { version = "1", features = ["v4", "serde"] }
 argon2 = "0.5"
+bcrypt = "0.17"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt"] }
@@ -27,7 +27,6 @@ wiremock = "0.6"
 
 [features]
 default = []
-algorithms = ["dep:petgraph"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("tauri"))'] }
