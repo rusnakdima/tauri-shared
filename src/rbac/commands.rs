@@ -1,219 +1,175 @@
-use crate::rbac::{Permission, Role, RolePermission, UserRole};
-use crate::AppError;
-use nosql_orm::provider::DatabaseProvider;
+use crate::rbac::models::{Permission, Role, RolePermission, UserRole};
+use nosql_orm::prelude::*;
+use nosql_orm::providers::JsonProvider;
 
-pub async fn rbac_list_roles(db: &impl DatabaseProvider) -> Result<Vec<Role>, AppError> {
-  let items = db.find_all("roles").await.map_err(AppError::from)?;
-  let roles: Vec<Role> = items
+pub async fn rbac_list_roles(db: &JsonProvider) -> Result<Vec<Role>, String> {
+  let roles = db.find_all("roles").await.map_err(|e| e.to_string())?;
+  roles
     .into_iter()
-    .map(|data| serde_json::from_value(data).map_err(|e| AppError::ValidationError(e.to_string())))
-    .collect::<Result<Vec<_>, _>>()?;
-  Ok(roles)
+    .map(|data| serde_json::from_value(data).map_err(|e| e.to_string()))
+    .collect()
 }
 
 pub async fn rbac_create_role(
-  db: &impl DatabaseProvider,
+  db: &JsonProvider,
   name: String,
   description: String,
-) -> Result<Role, AppError> {
-  let id = uuid::Uuid::new_v4().to_string();
-  let role = Role {
-    id: id.clone(),
-    name,
-    description,
-  };
-  let data = serde_json::to_value(&role).map_err(|e| AppError::ValidationError(e.to_string()))?;
-  db.insert("roles", data).await.map_err(AppError::from)?;
+) -> Result<Role, String> {
+  let role = Role::new(name, description);
+  let role_value = serde_json::to_value(&role).map_err(|e| e.to_string())?;
+  db.insert("roles", role_value)
+    .await
+    .map_err(|e| e.to_string())?;
   Ok(role)
 }
 
-pub async fn rbac_delete_role(db: &impl DatabaseProvider, role_id: String) -> Result<(), AppError> {
-  db.delete("roles", &role_id).await.map_err(AppError::from)?;
+pub async fn rbac_delete_role(db: &JsonProvider, role_id: String) -> Result<(), String> {
+  db.delete("roles", &role_id)
+    .await
+    .map_err(|e| e.to_string())?;
   Ok(())
 }
 
-pub async fn rbac_list_permissions(
-  db: &impl DatabaseProvider,
-) -> Result<Vec<Permission>, AppError> {
-  let items = db.find_all("permissions").await.map_err(AppError::from)?;
-  let permissions: Vec<Permission> = items
+pub async fn rbac_list_permissions(db: &JsonProvider) -> Result<Vec<Permission>, String> {
+  let permissions = db.find_all("permissions").await.map_err(|e| e.to_string())?;
+  permissions
     .into_iter()
-    .map(|data| serde_json::from_value(data).map_err(|e| AppError::ValidationError(e.to_string())))
-    .collect::<Result<Vec<_>, _>>()?;
-  Ok(permissions)
+    .map(|data| serde_json::from_value(data).map_err(|e| e.to_string()))
+    .collect()
 }
 
 pub async fn rbac_create_permission(
-  db: &impl DatabaseProvider,
+  db: &JsonProvider,
   name: String,
   resource: String,
   action: String,
-) -> Result<Permission, AppError> {
-  let id = uuid::Uuid::new_v4().to_string();
-  let permission = Permission {
-    id: id.clone(),
-    name,
-    resource,
-    action,
-    fields: None,
-    condition: None,
-  };
-  let data =
-    serde_json::to_value(&permission).map_err(|e| AppError::ValidationError(e.to_string()))?;
-  db.insert("permissions", data)
+) -> Result<Permission, String> {
+  let permission = Permission::new(name, resource, action);
+  let perm_value = serde_json::to_value(&permission).map_err(|e| e.to_string())?;
+  db.insert("permissions", perm_value)
     .await
-    .map_err(AppError::from)?;
+    .map_err(|e| e.to_string())?;
   Ok(permission)
 }
 
-pub async fn rbac_delete_permission(
-  db: &impl DatabaseProvider,
-  perm_id: String,
-) -> Result<(), AppError> {
+pub async fn rbac_delete_permission(db: &JsonProvider, perm_id: String) -> Result<(), String> {
   db.delete("permissions", &perm_id)
     .await
-    .map_err(AppError::from)?;
+    .map_err(|e| e.to_string())?;
   Ok(())
 }
 
 pub async fn rbac_assign_role_to_user(
-  db: &impl DatabaseProvider,
+  db: &JsonProvider,
   user_id: String,
   role_id: String,
-) -> Result<UserRole, AppError> {
-  let id = uuid::Uuid::new_v4().to_string();
-  let granted_at = chrono::Utc::now().to_rfc3339();
-  let user_role = UserRole {
-    id: id.clone(),
-    user_id,
-    role_id,
-    granted_by: String::new(),
-    granted_at: Some(granted_at),
-  };
-  let data =
-    serde_json::to_value(&user_role).map_err(|e| AppError::ValidationError(e.to_string()))?;
-  db.insert("user_roles", data)
+) -> Result<UserRole, String> {
+  let user_role = UserRole::new(user_id, role_id);
+  let ur_value = serde_json::to_value(&user_role).map_err(|e| e.to_string())?;
+  db.insert("user_roles", ur_value)
     .await
-    .map_err(AppError::from)?;
+    .map_err(|e| e.to_string())?;
   Ok(user_role)
 }
 
 pub async fn rbac_remove_role_from_user(
-  db: &impl DatabaseProvider,
+  db: &JsonProvider,
   user_id: String,
   role_id: String,
-) -> Result<(), AppError> {
-  let items = db.find_all("user_roles").await.map_err(AppError::from)?;
-  let user_roles: Vec<UserRole> = items
-    .into_iter()
-    .map(|data| serde_json::from_value(data).map_err(|e| AppError::ValidationError(e.to_string())))
-    .collect::<Result<Vec<_>, _>>()?;
-  for ur in user_roles {
-    if ur.user_id == user_id && ur.role_id == role_id {
-      db.delete("user_roles", &ur.id)
-        .await
-        .map_err(AppError::from)?;
-      return Ok(());
+) -> Result<(), String> {
+  let user_roles = db.find_all("user_roles").await.map_err(|e| e.to_string())?;
+  let to_delete = user_roles.iter().find(|ur| {
+    ur.get("user_id").and_then(|v| v.as_str()) == Some(&user_id)
+      && ur.get("role_id").and_then(|v| v.as_str()) == Some(&role_id)
+  });
+
+  if let Some(ur) = to_delete {
+    if let Some(id) = ur.get("id").and_then(|v| v.as_str()) {
+      db.delete("user_roles", id).await.map_err(|e| e.to_string())?;
     }
   }
-  Err(AppError::NotFound("UserRole not found".to_string()))
+  Ok(())
 }
 
 pub async fn rbac_grant_permission(
-  db: &impl DatabaseProvider,
+  db: &JsonProvider,
   role_id: String,
   perm_id: String,
-) -> Result<RolePermission, AppError> {
-  let id = uuid::Uuid::new_v4().to_string();
-  let rp = RolePermission {
-    id: id.clone(),
-    role_id,
-    permission_id: perm_id,
-  };
-  let data = serde_json::to_value(&rp).map_err(|e| AppError::ValidationError(e.to_string()))?;
-  db.insert("role_permissions", data)
+) -> Result<RolePermission, String> {
+  let role_perm = RolePermission::new(role_id, perm_id);
+  let rp_value = serde_json::to_value(&role_perm).map_err(|e| e.to_string())?;
+  db.insert("role_permissions", rp_value)
     .await
-    .map_err(AppError::from)?;
-  Ok(rp)
+    .map_err(|e| e.to_string())?;
+  Ok(role_perm)
 }
 
 pub async fn rbac_revoke_permission(
-  db: &impl DatabaseProvider,
+  db: &JsonProvider,
   role_id: String,
   perm_id: String,
-) -> Result<(), AppError> {
-  let items = db
-    .find_all("role_permissions")
-    .await
-    .map_err(AppError::from)?;
-  let rps: Vec<RolePermission> = items
-    .into_iter()
-    .map(|data| serde_json::from_value(data).map_err(|e| AppError::ValidationError(e.to_string())))
-    .collect::<Result<Vec<_>, _>>()?;
-  for rp in rps {
-    if rp.role_id == role_id && rp.permission_id == perm_id {
-      db.delete("role_permissions", &rp.id)
+) -> Result<(), String> {
+  let role_perms = db.find_all("role_permissions").await.map_err(|e| e.to_string())?;
+  let to_delete = role_perms.iter().find(|rp| {
+    rp.get("role_id").and_then(|v| v.as_str()) == Some(&role_id)
+      && rp.get("permission_id").and_then(|v| v.as_str()) == Some(&perm_id)
+  });
+
+  if let Some(rp) = to_delete {
+    if let Some(id) = rp.get("id").and_then(|v| v.as_str()) {
+      db.delete("role_permissions", id)
         .await
-        .map_err(AppError::from)?;
-      return Ok(());
+        .map_err(|e| e.to_string())?;
     }
   }
-  Err(AppError::NotFound("RolePermission not found".to_string()))
+  Ok(())
 }
 
-pub async fn rbac_get_user_roles(
-  db: &impl DatabaseProvider,
-  user_id: String,
-) -> Result<Vec<Role>, AppError> {
-  let user_role_items = db.find_all("user_roles").await.map_err(AppError::from)?;
-  let user_roles: Vec<UserRole> = user_role_items
-    .into_iter()
-    .map(|data| serde_json::from_value(data).map_err(|e| AppError::ValidationError(e.to_string())))
-    .collect::<Result<Vec<_>, _>>()?;
-  let role_items = db.find_all("roles").await.map_err(AppError::from)?;
-  let all_roles: Vec<Role> = role_items
-    .into_iter()
-    .map(|data| serde_json::from_value(data).map_err(|e| AppError::ValidationError(e.to_string())))
-    .collect::<Result<Vec<_>, _>>()?;
-  let role_ids: std::collections::HashSet<_> = user_roles
+pub async fn rbac_get_user_roles(db: &JsonProvider, user_id: String) -> Result<Vec<Role>, String> {
+  let user_roles = db.find_all("user_roles").await.map_err(|e| e.to_string())?;
+  let role_ids: Vec<String> = user_roles
     .iter()
-    .filter(|ur| ur.user_id == user_id)
-    .map(|ur| ur.role_id.clone())
+    .filter(|ur| ur.get("user_id").and_then(|v| v.as_str()) == Some(&user_id))
+    .filter_map(|ur| ur.get("role_id").and_then(|v| v.as_str()).map(String::from))
     .collect();
-  Ok(
-    all_roles
-      .into_iter()
-      .filter(|r| role_ids.contains(&r.id))
-      .collect(),
-  )
+
+  let all_roles = db.find_all("roles").await.map_err(|e| e.to_string())?;
+  all_roles
+    .into_iter()
+    .filter(|r| {
+      r.get("id")
+        .and_then(|v| v.as_str())
+        .map(|id| role_ids.contains(&id.to_string()))
+        .unwrap_or(false)
+    })
+    .map(|data| serde_json::from_value(data).map_err(|e| e.to_string()))
+    .collect()
 }
 
 pub async fn rbac_get_role_permissions(
-  db: &impl DatabaseProvider,
+  db: &JsonProvider,
   role_id: String,
-) -> Result<Vec<Permission>, AppError> {
-  let rp_items = db
-    .find_all("role_permissions")
-    .await
-    .map_err(AppError::from)?;
-  let role_perms: Vec<RolePermission> = rp_items
-    .into_iter()
-    .map(|data| serde_json::from_value(data).map_err(|e| AppError::ValidationError(e.to_string())))
-    .collect::<Result<Vec<_>, _>>()?;
-  let perm_items = db.find_all("permissions").await.map_err(AppError::from)?;
-  let all_perms: Vec<Permission> = perm_items
-    .into_iter()
-    .map(|data| serde_json::from_value(data).map_err(|e| AppError::ValidationError(e.to_string())))
-    .collect::<Result<Vec<_>, _>>()?;
-  let perm_ids: std::collections::HashSet<_> = role_perms
+) -> Result<Vec<Permission>, String> {
+  let role_perms = db.find_all("role_permissions").await.map_err(|e| e.to_string())?;
+  let perm_ids: Vec<String> = role_perms
     .iter()
-    .filter(|rp| rp.role_id == role_id)
-    .map(|rp| rp.permission_id.clone())
+    .filter(|rp| rp.get("role_id").and_then(|v| v.as_str()) == Some(&role_id))
+    .filter_map(|rp| {
+      rp.get("permission_id")
+        .and_then(|v| v.as_str())
+        .map(String::from)
+    })
     .collect();
-  Ok(
-    all_perms
-      .into_iter()
-      .filter(|p| perm_ids.contains(&p.id))
-      .collect(),
-  )
+
+  let all_perms = db.find_all("permissions").await.map_err(|e| e.to_string())?;
+  all_perms
+    .into_iter()
+    .filter(|p| {
+      p.get("id")
+        .and_then(|v| v.as_str())
+        .map(|id| perm_ids.contains(&id.to_string()))
+        .unwrap_or(false)
+    })
+    .map(|data| serde_json::from_value(data).map_err(|e| e.to_string()))
+    .collect()
 }

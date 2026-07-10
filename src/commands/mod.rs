@@ -1,4 +1,5 @@
 pub mod algorithm_commands;
+pub mod crud_macro;
 pub mod kernel_db;
 pub mod kernel_entity;
 pub mod logger_commands;
