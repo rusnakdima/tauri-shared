@@ -1,4 +1,3 @@
-pub mod algorithm_commands;
 pub mod crud_macro;
 pub mod kernel_db;
 pub mod kernel_entity;
@@ -6,6 +5,7 @@ pub mod logger_commands;
 pub mod schema_commands;
 pub mod schema_db;
 pub mod sdui_commands;
+pub mod schema_sync_commands;
 
 pub use kernel_db::KernelDb;
 pub use kernel_entity::KernelEntity;

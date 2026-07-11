@@ -30,3 +30,14 @@ pub use storage::{
 pub use validation::*;
 
 pub use nosql_orm::Entity;
+
+use std::sync::Arc;
+use tauri::Manager;
+
+/// Register CRUD-related state (CrudService) in the Tauri app.
+/// Each app calls this during app setup to inject a shared CrudService for
+/// schema-defined CRUD operations.
+pub fn register_crud_commands(app: &mut tauri::App, provider: JsonProviderState) {
+    let crud_service = Arc::new(CrudService::new(provider.as_ref().clone()));
+    app.manage(crud_service);
+}
