@@ -6,6 +6,7 @@ pub mod schema_commands;
 pub mod schema_db;
 pub mod sdui_commands;
 pub mod schema_sync_commands;
+pub mod update_commands;
 
 pub use kernel_db::KernelDb;
 pub use kernel_entity::KernelEntity;
