@@ -14,6 +14,7 @@ pub enum AppError {
   Io(String),
   PermissionDenied(String),
   InvalidPath(String),
+  RequestFailed(String),
 }
 
 impl std::fmt::Display for AppError {
@@ -30,11 +31,18 @@ impl std::fmt::Display for AppError {
       AppError::Io(msg) => write!(f, "IO error: {}", msg),
       AppError::PermissionDenied(msg) => write!(f, "Permission denied: {}", msg),
       AppError::InvalidPath(msg) => write!(f, "Invalid path: {}", msg),
+      AppError::RequestFailed(msg) => write!(f, "Request failed: {}", msg),
     }
   }
 }
 
 impl std::error::Error for AppError {}
+
+impl From<tokio_tungstenite::tungstenite::Error> for AppError {
+    fn from(err: tokio_tungstenite::tungstenite::Error) -> Self {
+        AppError::Network(err.to_string())
+    }
+}
 
 impl From<nosql_orm::error::OrmError> for AppError {
   fn from(err: nosql_orm::error::OrmError) -> Self {

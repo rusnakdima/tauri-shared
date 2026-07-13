@@ -16,7 +16,9 @@ pub mod storage;
 pub mod update;
 
 pub use commands::*;
+pub use error::AppError;
 pub use http_client::{HttpClient, HttpResponse, AppError as HttpClientAppError};
+pub use crud::service::CrudService;
 pub use axum_handlers::*;
 pub use logger::*;
 pub use rbac::*;
