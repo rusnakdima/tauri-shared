@@ -22,18 +22,12 @@ pub struct AppConfig {
 pub struct AppSettings {
   pub default_locale: String,
   pub supported_locales: Vec<String>,
-  #[serde(default = "default_tailwind_preset")]
-  pub tailwind_preset: String,
   #[serde(default = "default_theme_name")]
   pub theme: String,
   #[serde(default)]
   pub themes: Vec<Theme>,
   #[serde(default = "default_color_mode")]
   pub color_mode: ColorMode,
-}
-
-fn default_tailwind_preset() -> String {
-  "default".to_string()
 }
 
 fn default_theme_name() -> String {
@@ -58,7 +52,6 @@ impl Default for AppSettings {
     Self {
       default_locale: "en".to_string(),
       supported_locales: vec!["en".to_string()],
-      tailwind_preset: default_tailwind_preset(),
       theme: default_theme_name(),
       themes: vec![get_light_theme(), get_dark_theme()],
       color_mode: default_color_mode(),

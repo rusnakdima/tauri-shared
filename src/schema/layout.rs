@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use ts_rs::TS;
 
-use super::grid::{TailwindBreakpoints, TailwindResponsiveClasses};
+use super::grid::{ResponsiveBreakpoints, ResponsiveClasses};
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
@@ -36,7 +36,7 @@ pub struct LayoutSlot {
   #[serde(default)]
   pub grid_area: Option<String>,
   #[serde(default)]
-  pub responsive_classes: Option<TailwindResponsiveClasses>,
+  pub responsive_classes: Option<ResponsiveClasses>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
@@ -53,7 +53,7 @@ pub struct GridTemplate {
   #[serde(default)]
   pub areas: Option<Vec<GridArea>>,
   #[serde(default)]
-  pub breakpoints: Option<TailwindBreakpoints>,
+  pub breakpoints: Option<ResponsiveBreakpoints>,
 }
 
 fn default_grid_columns() -> Vec<GridTrack> {

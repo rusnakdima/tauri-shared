@@ -60,7 +60,7 @@ macro_rules! define_crud_routes {
                 .$method_create($table, data)
                 .await
                 .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::created("Created", result))
+            Ok(tauri_shared::response::Response::created(result))
         }
 
         #[allow(dead_code)]
@@ -75,7 +75,7 @@ macro_rules! define_crud_routes {
                 .$method_update($table, &id, data)
                 .await
                 .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::updated("Updated", result))
+            Ok(tauri_shared::response::Response::updated(result))
         }
 
         #[allow(dead_code)]
@@ -90,7 +90,7 @@ macro_rules! define_crud_routes {
                 .$method_patch($table, &id, patch)
                 .await
                 .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::updated("Patched", result))
+            Ok(tauri_shared::response::Response::updated(result))
         }
 
         #[allow(dead_code)]
@@ -105,10 +105,9 @@ macro_rules! define_crud_routes {
                 .await
                 .map_err(|e| e.to_string())?;
             if result {
-                Ok(tauri_shared::response::Response::deleted("Deleted", serde_json::Value::Null))
+                Ok(tauri_shared::response::Response::deleted(serde_json::Value::Null))
             } else {
                 Ok(tauri_shared::response::Response::error(
-                    tauri_shared::response::Status::Error,
                     "Delete failed",
                 ))
             }
@@ -171,7 +170,7 @@ macro_rules! define_crud_routes_no_table {
                 .$method_create(data)
                 .await
                 .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::created("Created", result))
+            Ok(tauri_shared::response::Response::created(result))
         }
 
         #[allow(dead_code)]
@@ -186,7 +185,7 @@ macro_rules! define_crud_routes_no_table {
                 .$method_update(&id, data)
                 .await
                 .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::updated("Updated", result))
+            Ok(tauri_shared::response::Response::updated(result))
         }
 
         #[allow(dead_code)]
@@ -201,7 +200,7 @@ macro_rules! define_crud_routes_no_table {
                 .$method_patch(&id, patch)
                 .await
                 .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::updated("Patched", result))
+            Ok(tauri_shared::response::Response::updated(result))
         }
 
         #[allow(dead_code)]
@@ -215,7 +214,7 @@ macro_rules! define_crud_routes_no_table {
                 .$method_delete(&id)
                 .await
                 .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::deleted("Deleted", result))
+            Ok(tauri_shared::response::Response::deleted(result))
         }
     }
   };

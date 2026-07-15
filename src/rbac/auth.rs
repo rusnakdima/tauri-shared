@@ -61,10 +61,7 @@ pub async fn register(
   Ok(user)
 }
 
-pub async fn get_current_user(
-  db: &JsonProvider,
-  session_token: String,
-) -> Result<User, String> {
+pub async fn get_current_user(db: &JsonProvider, session_token: String) -> Result<User, String> {
   let sessions = db.find_all("sessions").await.map_err(|e| e.to_string())?;
   let session_data = sessions
     .into_iter()

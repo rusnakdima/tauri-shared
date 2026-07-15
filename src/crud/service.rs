@@ -90,7 +90,10 @@ impl CrudService {
           .count(entity, None)
           .await
           .map_err(|e| e.to_string())?;
-        Ok(Response::success(Value::Number(count.into()), Some("Count")))
+        Ok(Response::success(
+          Value::Number(count.into()),
+          Some("Count"),
+        ))
       }
       "exists" => {
         let id = id.ok_or("ID required for exists")?;

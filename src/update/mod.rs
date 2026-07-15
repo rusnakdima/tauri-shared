@@ -13,7 +13,7 @@ pub use platform::Platform;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckUpdateResult {
-    pub has_update: bool,
-    pub update_info: Option<UpdateInfo>,
-    pub error: Option<String>,
+  pub has_update: bool,
+  pub update_info: Option<UpdateInfo>,
+  pub error: Option<String>,
 }

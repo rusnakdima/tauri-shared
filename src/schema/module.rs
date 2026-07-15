@@ -28,12 +28,3 @@ pub struct CommandDef {
 fn default_return_type() -> String {
   "void".to_string()
 }
-
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct MiddlewareDef {
-  pub name: String,
-  #[serde(default)]
-  pub description: Option<String>,
-}

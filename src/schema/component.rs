@@ -71,12 +71,3 @@ pub struct ComponentProp {
 fn default_prop_type() -> String {
   "string".to_string()
 }
-
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct ComponentEvent {
-  pub name: String,
-  #[serde(default)]
-  pub description: Option<String>,
-}

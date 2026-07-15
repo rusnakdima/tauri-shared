@@ -31,7 +31,10 @@ pub async fn rbac_delete_role(db: &JsonProvider, role_id: String) -> Result<(), 
 }
 
 pub async fn rbac_list_permissions(db: &JsonProvider) -> Result<Vec<Permission>, String> {
-  let permissions = db.find_all("permissions").await.map_err(|e| e.to_string())?;
+  let permissions = db
+    .find_all("permissions")
+    .await
+    .map_err(|e| e.to_string())?;
   permissions
     .into_iter()
     .map(|data| serde_json::from_value(data).map_err(|e| e.to_string()))
@@ -85,7 +88,9 @@ pub async fn rbac_remove_role_from_user(
 
   if let Some(ur) = to_delete {
     if let Some(id) = ur.get("id").and_then(|v| v.as_str()) {
-      db.delete("user_roles", id).await.map_err(|e| e.to_string())?;
+      db.delete("user_roles", id)
+        .await
+        .map_err(|e| e.to_string())?;
     }
   }
   Ok(())
@@ -109,7 +114,10 @@ pub async fn rbac_revoke_permission(
   role_id: String,
   perm_id: String,
 ) -> Result<(), String> {
-  let role_perms = db.find_all("role_permissions").await.map_err(|e| e.to_string())?;
+  let role_perms = db
+    .find_all("role_permissions")
+    .await
+    .map_err(|e| e.to_string())?;
   let to_delete = role_perms.iter().find(|rp| {
     rp.get("role_id").and_then(|v| v.as_str()) == Some(&role_id)
       && rp.get("permission_id").and_then(|v| v.as_str()) == Some(&perm_id)
@@ -150,7 +158,10 @@ pub async fn rbac_get_role_permissions(
   db: &JsonProvider,
   role_id: String,
 ) -> Result<Vec<Permission>, String> {
-  let role_perms = db.find_all("role_permissions").await.map_err(|e| e.to_string())?;
+  let role_perms = db
+    .find_all("role_permissions")
+    .await
+    .map_err(|e| e.to_string())?;
   let perm_ids: Vec<String> = role_perms
     .iter()
     .filter(|rp| rp.get("role_id").and_then(|v| v.as_str()) == Some(&role_id))
@@ -161,7 +172,10 @@ pub async fn rbac_get_role_permissions(
     })
     .collect();
 
-  let all_perms = db.find_all("permissions").await.map_err(|e| e.to_string())?;
+  let all_perms = db
+    .find_all("permissions")
+    .await
+    .map_err(|e| e.to_string())?;
   all_perms
     .into_iter()
     .filter(|p| {

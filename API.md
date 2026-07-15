@@ -10,23 +10,17 @@ Auto-generated from source. For usage documentation, see [README.md](./README.md
 pub mod commands;       // Tauri command handlers
 pub mod crud;          // CRUD filter/query types
 pub mod error;         // AppError type
-pub mod i18n;          // Translation
-pub mod logger;         // File logging
-pub mod lru;           // LRU cache
-pub mod macros;        // Procedural macros
-pub mod migration;      // DB migration system
+pub mod extension;     // Designer extension system
+pub mod http_client;   // HTTP client for cloud sync
+pub mod logger;        // File logging
 pub mod rbac;          // Role-based access control
-pub mod repository;     // Kernel repository
 pub mod response;      // Response<T> wrapper
 pub mod result;        // Result type alias
-pub mod runtime;       // SDUI engine
 pub mod schema;        // Schema types
-pub mod storage;       // SignalStore, JsonProvider
-pub mod sync;          // Sync engine
-pub mod typescript;    // TypeScript bindings generator
+pub mod storage;       // SignalStore, JsonProvider, SchemaSyncService
+pub mod update;        // Auto-update system
 pub mod validation;    // Input validation
-
-#[cfg(feature = "algorithms")]
+pub mod websocket;     // WebSocket client
 pub mod algorithms;    // Sorting, searching, graph algorithms
 ```
 
@@ -62,6 +56,19 @@ pub enum Status {
     NotFound,
     Unauthorized,
     Forbidden,
+}
+
+impl<T> Response<T> {
+    pub fn success(data: T, message: Option<&str>) -> Self
+    pub fn created(data: T) -> Self
+    pub fn updated(data: T) -> Self
+    pub fn deleted(data: T) -> Self
+    pub fn error(message: impl Into<String>) -> Self
+    pub fn error_with_data(data: T, message: impl Into<String>) -> Self
+    pub fn validation_error(message: impl Into<String>) -> Self
+    pub fn not_found(message: impl Into<String>) -> Self
+    pub fn unauthorized() -> Self
+    pub fn forbidden() -> Self
 }
 ```
 
@@ -172,24 +179,6 @@ pub struct RenderedPage {
 }
 ```
 
-## Runtime / SDUI Engine
-
-```rust
-pub use runtime::{SduiEngine, Router};
-
-impl SduiEngine {
-    pub fn from(schema: UiSchema) -> Self
-    pub fn load_schema(&mut self, schema: UiSchema)
-    pub fn render_page(&self, route: &str) -> Result<RenderedPage>
-    pub fn resolve_binding(&self, binding: &DataBinding) -> Result<serde_json::Value>
-    pub fn navigate(&mut self, route: &str) -> Result<()>
-}
-
-impl Router {
-    pub fn resolve_route(&self, path: &str) -> Option<String>
-}
-```
-
 ## Storage
 
 ```rust
@@ -198,14 +187,19 @@ pub use storage::{
     create_json_provider_with_config,
     JsonProvider,
     JsonProviderState,
-    SignalStore,
+    SchemaSyncService,
+    signal_store::SignalStore,
+    setup_schema_system,
+    SchemaConfig,
+    SchemaSystem,
+    SchemaSyncState,
 };
 ```
 
 ### SignalStore
 
 ```rust
-use tauri_shared::storage::SignalStore;
+use tauri_shared::storage::signal_store::SignalStore;
 
 impl SignalStore {
     pub fn new(provider: JsonProvider) -> Self
@@ -219,40 +213,6 @@ impl SignalStore {
 
 pub fn create_json_provider(path: &str) -> Result<JsonProvider>
 pub fn create_json_provider_with_config(path: &str, max_size: usize) -> Result<JsonProvider>
-```
-
-## Sync Engine
-
-```rust
-pub use sync::{
-    MongoBridge,
-    SchemaSyncService,
-    SyncEngine,
-    SyncOperation,
-    SyncQueue,
-};
-
-pub enum SyncOperation {
-    Create,
-    Update,
-    Delete,
-}
-
-pub struct SyncQueue {
-    pub operations: Vec<SyncOperation>,
-}
-
-impl SyncEngine {
-    pub fn new(bridge: MongoBridge, queue: SyncQueue) -> Self
-    pub async fn sync_to_cloud(&self) -> Result<()>
-    pub async fn pull_from_cloud(&self) -> Result<UiSchema>
-}
-
-impl MongoBridge {
-    pub fn new(uri: &str, db_name: &str) -> Self
-    pub async fn push(&self, schema: &UiSchema) -> Result<()>
-    pub async fn pull(&self) -> Result<UiSchema>
-}
 ```
 
 ## RBAC
@@ -336,45 +296,24 @@ impl FileLogger {
 }
 ```
 
-## Migration
-
-```rust
-pub use migration::{Migration, MigrationError};
-
-#[async_trait::async_trait]
-pub trait Migration: Send + Sync {
-    fn id(&self) -> &str;
-    fn description(&self) -> &str;
-    async fn up(&self, db: &Database) -> Result<(), MigrationError>;
-    async fn down(&self, db: &Database) -> Result<(), MigrationError>;
-}
-
-pub enum MigrationError {
-    Internal(String),
-    RollbackFailed(String),
-}
-```
-
 ## CRUD
 
 ```rust
-pub use crud::{CrudFilter, CrudQuery, CrudResult, PaginatedResult};
+pub use crud::{
+    service::CrudService,
+    CrudFilter, CrudQuery, CrudResult, PaginatedResult,
+};
 
-pub enum CrudFilter {
-    Eq(String, serde_json::Value),
-    Ne(String, serde_json::Value),
-    Gt(String, serde_json::Value),
-    Lt(String, serde_json::Value),
-    Contains(String, serde_json::Value),
-    In(String, Vec<serde_json::Value>),
+pub struct CrudFilter {
+    pub field: String,
+    pub op: String,
+    pub value: serde_json::Value,
 }
 
 pub struct CrudQuery {
     pub filters: Vec<CrudFilter>,
-    pub sort_by: Option<String>,
-    pub order: Option<String>,
-    pub page: Option<usize>,
-    pub page_size: Option<usize>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
 }
 
 pub struct CrudResult<T> {
@@ -384,40 +323,8 @@ pub struct CrudResult<T> {
 
 pub struct PaginatedResult<T> {
     pub items: Vec<T>,
-    pub page: usize,
-    pub page_size: usize,
-    pub total: usize,
-}
-```
-
-## Repository
-
-```rust
-pub use repository::KernelRepository;
-
-pub trait KernelRepository: Send + Sync {
-    async fn find_by_id(&self, id: &str) -> Result<Option<serde_json::Value>>;
-    async fn find_all(&self, query: CrudQuery) -> Result<CrudResult<Vec<serde_json::Value>>>;
-    async fn create(&self, data: serde_json::Value) -> Result<serde_json::Value>;
-    async fn update(&self, id: &str, data: serde_json::Value) -> Result<serde_json::Value>;
-    async fn delete(&self, id: &str) -> Result<()>;
-    async fn count(&self) -> Result<usize>;
-}
-```
-
-## LRU Cache
-
-```rust
-pub use lru::LruCache;
-
-impl<K: Eq + Hash + Clone, V: Clone> LruCache<K, V> {
-    pub fn new(capacity: usize) -> Self
-    pub fn get(&self, key: &K) -> Option<V>
-    pub fn put(&mut self, key: K, value: V) -> Option<V>
-    pub fn remove(&mut self, key: &K) -> Option<V>
-    pub fn clear(&mut self)
-    pub fn len(&self) -> usize
-    pub fn is_empty(&self) -> bool
+    pub has_more: bool,
+    pub total_count: usize,
 }
 ```
 
@@ -431,38 +338,6 @@ pub fn validate_sql(identifier: &str) -> Result<()>
 pub fn validate_connection_id(id: &str) -> Result<()>
 ```
 
-## i18n
-
-```rust
-pub use i18n::{translate, tauri_translate};
-
-pub fn translate(
-    key: &str,
-    args: &[(&str, &str)],
-    locale: &str,
-) -> Result<String>;
-
-#[cfg(feature = "tauri")]
-pub async fn tauri_translate(
-    key: &str,
-    args: &[(&str, &str)],
-) -> Result<String>;
-```
-
-## TypeScript Bindings
-
-```rust
-pub use typescript::{generate_typescript_bindings, schema_ts_bindings, ts_inline, ToTypeScript};
-
-pub trait ToTypeScript {
-    fn to_typescript(&self) -> String;
-}
-
-pub fn generate_typescript_bindings<T: ToTypeScript>() -> String
-pub fn schema_ts_bindings() -> String
-pub fn ts_inline<T: ToTypeScript>() -> String
-```
-
 ## Kernel Entity
 
 ```rust
@@ -474,44 +349,130 @@ pub trait KernelEntity: Send + Sync {
 }
 ```
 
-## Macros
+## Extension System
 
 ```rust
-pub use macros::impl_entity_commands_inner;
+pub use extension::{DesignerExtension, designer_extension, init_extensions_with_app, get_extension_names};
 
-impl_entity_commands_inner!(MyEntity, "entity_name");
+pub trait DesignerExtension: Send + Sync {
+    fn name(&self) -> &str;
+    fn register_commands(&self, app: &mut tauri::App) {}
+    fn init(&self, app: &AppHandle) {}
+}
+
+pub fn init_extensions_with_app(app: &mut tauri::App)
+pub fn get_extension_names() -> Vec<String>
+pub fn register_extension<E: DesignerExtension + 'static>(extension: E)
+
+// Macro: designer_extension!(MyExtension);
 ```
 
-Generates: `entity_create_<name>`, `entity_read_<name>`, `entity_update_<name>`, `entity_delete_<name>`, `entity_list_<name>`, `entity_count_<name>`.
+Allows `@Designer/` libraries to extend the IPC command API without modifying the main Designer application.
+
+## HTTP Client
+
+```rust
+pub use http_client::{HttpClient, HttpResponse, AppError as HttpClientAppError};
+
+pub struct HttpClient {
+    pub base_url: String,
+}
+
+impl HttpClient {
+    pub fn new(base_url: String) -> Self
+    pub async fn get<T>(&self, path: String) -> Result<HttpResponse<T>>
+    pub async fn post<T>(&self, path: String, body: Value) -> Result<HttpResponse<T>>
+    pub async fn put<T>(&self, path: String, body: Value) -> Result<HttpResponse<T>>
+    pub async fn delete<T>(&self, path: String) -> Result<HttpResponse<T>>
+}
+
+pub struct HttpResponse<T> {
+    pub status: String,
+    pub message: Option<String>,
+    pub data: Option<T>,
+    pub timestamp: i64,
+}
+```
+
+## WebSocket Client
+
+```rust
+pub use websocket::WsClient;
+
+pub struct WsClient {
+    pub url: String,
+}
+
+impl WsClient {
+    pub fn new(url: String) -> Self
+    pub async fn send(&self, message: String) -> Result<(), AppError>
+    pub async fn receive(&self) -> Result<String, AppError>
+    pub async fn subscribe(&self, channel: String) -> Result<String, AppError>
+}
+```
+
+## Auto-Update
+
+```rust
+pub use update::{
+    check_for_update, download_update, get_temp_download_path, install_update,
+    CheckUpdateResult, Platform, UpdateInfo, DownloadProgress, GitHubAsset, GitHubRelease,
+};
+
+pub struct CheckUpdateResult {
+    pub has_update: bool,
+    pub update_info: Option<UpdateInfo>,
+    pub error: Option<String>,
+}
+
+pub fn check_for_update() -> Result<CheckUpdateResult>
+pub async fn download_update() -> Result<DownloadProgress>
+pub fn get_temp_download_path() -> String
+pub fn install_update() -> Result<()>
+
+pub enum Platform { Mac, MacArch, Windows, Linux, Android, Ios }
+```
 
 ## Algorithm Commands (feature = "algorithms")
 
-Requires `features = ["algorithms"]` in Cargo.toml.
-
 ```rust
-pub use algorithms::sorting::{bubble_sort, insertion_sort, merge_sort, quick_sort};
-pub use algorithms::searching::{binary_search, linear_search};
-pub use algorithms::graph::{dijkstra, bfs, dfs};
-```
+pub use algorithms::{ValidationAlgorithm, SearchAlgorithm};
 
-All algorithms operate on `Vec<T: Ord>` or graphs defined with `petgraph`.
+impl ValidationAlgorithm {
+    pub fn validate_input(input: &str, max_length: usize) -> bool
+    pub fn validate_email(email: &str) -> bool
+    pub fn sanitize_input(input: &str) -> String
+}
+
+impl SearchAlgorithm {
+    pub fn search_schemas<T: AsRef<str> + Clone>(items: &[T], query: &str) -> Vec<T>
+    pub fn paginate<T>(items: &[T], page: u64, limit: u64) -> Vec<T>
+}
+```
 
 ## Tauri Commands
 
 All commands use `#[tauri::command]` and return `Result<T>`:
 
 ```rust
-// Schema DB
-#[tauri::command] pub async fn db_get_schema(id: String) -> Result<UiSchema>
-#[tauri::command] pub async fn db_save_schema(id: String, schema: UiSchema) -> Result<()>
-#[tauri::command] pub async fn db_get_all_schemas() -> Result<Vec<UiSchema>>
-#[tauri::command] pub async fn db_delete_schema(id: String) -> Result<()>
+// Schema DB (nosql_orm JsonProvider)
+#[tauri::command] pub async fn db_get_schema(db: State<'_, JsonProvider>, id: String) -> Result<UiSchema>
+#[tauri::command] pub async fn db_save_schema(db: State<'_, JsonProvider>, id: String, schema: UiSchema) -> Result<()>
+#[tauri::command] pub async fn db_get_all_schemas(db: State<'_, JsonProvider>) -> Result<Vec<UiSchema>>
+#[tauri::command] pub async fn db_delete_schema(db: State<'_, JsonProvider>, id: String) -> Result<()>
 
-// SDUI
-#[tauri::command] pub async fn load_schema(schema: UiSchema, state: State<'_, SduiEngineState>) -> Result<UiSchema>
-#[tauri::command] pub fn render_page(route: String, state: State<'_, SduiEngineState>) -> Result<RenderedPage>
-#[tauri::command] pub fn resolve_binding(binding: DataBinding, state: State<'_, SduiEngineState>) -> Result<serde_json::Value>
-#[tauri::command] pub async fn sync_to_cloud(state: State<'_, Arc<SyncEngine>>) -> Result<()>
+// Schema commands (alternative API)
+#[tauri::command] pub async fn get_schema(db: State<'_, JsonProvider>, id: String) -> Result<UiSchema>
+#[tauri::command] pub async fn save_schema(db: State<'_, JsonProvider>, schema: UiSchema) -> Result<()>
+#[tauri::command] pub async fn get_ui_schema(db: State<'_, JsonProvider>, id: String) -> Result<Response<serde_json::Value>>
+#[tauri::command] pub async fn save_ui_schema(db: State<'_, JsonProvider>, id: String, schema: serde_json::Value) -> Result<Response<()>>
+#[tauri::command] pub async fn delete_schema(db: State<'_, JsonProvider>, id: String) -> Result<()>
+
+// Schema sync (MongoDB cloud → local JSON)
+#[tauri::command] pub async fn get_schema_local_first(id: String, state: State<'_, Arc<SchemaSyncState>>) -> Result<Response<serde_json::Value>>
+#[tauri::command] pub async fn sync_schema_from_cloud(id: String, state: State<'_, Arc<SchemaSyncState>>) -> Result<Response<serde_json::Value>>
+
+// RBAC
 #[tauri::command] pub fn check_permission(permission: Permission, resource: String, action: String) -> Result<bool>
 
 // Logger
@@ -527,4 +488,10 @@ All commands use `#[tauri::command]` and return `Result<T>`:
 #[tauri::command] pub async fn kernel_create(data: serde_json::Value) -> Result<serde_json::Value>
 #[tauri::command] pub async fn kernel_update(id: String, data: serde_json::Value) -> Result<serde_json::Value>
 #[tauri::command] pub async fn kernel_delete(id: String) -> Result<()>
+
+// Update
+#[tauri::command] pub async fn check_for_update_command() -> Result<CheckUpdateResult>
+#[tauri::command] pub async fn download_update_command() -> Result<DownloadProgress>
+#[tauri::command] pub async fn install_update_command() -> Result<()>
+#[tauri::command] pub fn get_current_version() -> String
 ```

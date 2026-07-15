@@ -1,6 +1,6 @@
 # tauri-shared
 
-Rust backend library for Tauri desktop applications. Provides schema management, SDUI rendering pipeline, sync engine, storage, RBAC, logging, migration system, and algorithm implementations.
+Rust backend library for Tauri desktop applications. Provides schema management, storage (JsonProvider + SignalStore), SchemaSyncService, RBAC, logging, HTTP/WebSocket clients, auto-update, and algorithm implementations.
 
 ## Adding to Your Project
 
@@ -30,7 +30,10 @@ All commands are `async` and callable from the frontend via `@tauri-apps/api`:
 
 ```rust
 // In your Tauri app's lib.rs:
-use tauri_shared::commands::{db_get_schema, db_save_schema, db_get_all_schemas, db_delete_schema};
+use tauri_shared::commands::{
+    db_get_schema, db_save_schema, db_get_all_schemas, db_delete_schema,
+    get_schema, save_schema, get_ui_schema, save_ui_schema, delete_schema,
+};
 ```
 
 | Command | Signature | Description |
@@ -39,19 +42,28 @@ use tauri_shared::commands::{db_get_schema, db_save_schema, db_get_all_schemas, 
 | `db_save_schema` | `(id: String, schema: UiSchema) -> Result<()>` | Save schema to nosql_orm |
 | `db_get_all_schemas` | `() -> Result<Vec<UiSchema>>` | List all schemas |
 | `db_delete_schema` | `(id: String) -> Result<()>` | Delete schema by ID |
+| `get_schema` | `(id: String) -> Result<UiSchema>` | Fetch schema (alternative API) |
+| `save_schema` | `(schema: UiSchema) -> Result<()>` | Save schema (alternative API) |
 
-### SDUI Commands
+### Schema Sync Commands
 
 ```rust
-use tauri_shared::commands::sdui_commands::{load_schema, render_page, resolve_binding, sync_to_cloud, check_permission};
+use tauri_shared::commands::schema_sync_commands::{get_schema_local_first, sync_schema_from_cloud};
 ```
 
 | Command | Signature | Description |
 |---|---|---|
-| `load_schema` | `(schema: UiSchema) -> Result<UiSchema>` | Load schema into engine, returns it |
-| `render_page` | `(route: String) -> Result<RenderedPage>` | Render a page by route |
-| `resolve_binding` | `(binding: DataBinding) -> Result<serde_json::Value>` | Resolve a data binding expression |
-| `sync_to_cloud` | `() -> Result<()>` | Sync current schema to cloud |
+| `get_schema_local_first` | `(id: String) -> Result<Response<Value>>` | Try local JSON first, fall back to MongoDB cloud |
+| `sync_schema_from_cloud` | `(id: String) -> Result<Response<Value>>` | Force sync from MongoDB to local JSON |
+
+### RBAC Commands
+
+```rust
+use tauri_shared::commands::check_permission;
+```
+
+| Command | Signature | Description |
+|---|---|---|
 | `check_permission` | `(permission: Permission, resource: String, action: String) -> Result<bool>` | Check if permission matches resource/action |
 
 ### Logger Commands
@@ -65,12 +77,21 @@ use tauri_shared::commands::logger_commands::{get_log_entries, get_log_level, se
 Requires `features = ["algorithms"]`:
 
 ```rust
-use tauri_shared::commands::algorithm_commands::{bubble_sort, merge_sort, quick_sort, insertion_sort, dijkstra};
+use tauri_shared::algorithms::{ValidationAlgorithm, SearchAlgorithm};
+
+// Validation
+ValidationAlgorithm::validate_input("foo", 10);
+ValidationAlgorithm::validate_email("test@example.com");
+ValidationAlgorithm::sanitize_input("hello world");
+
+// Search
+SearchAlgorithm::search_schemas(&["schema1", "schema2"], "schema1");
+SearchAlgorithm::paginate(&[1, 2, 3, 4, 5], 1, 2); // page 1, limit 2 → [1, 2]
 ```
 
 ## Schema System
 
-The schema system is the backbone of SDUI (Schema-Driven UI):
+The schema system manages UI schemas for the application:
 
 ### Core Types
 
@@ -81,6 +102,7 @@ pub struct UiSchema {
     pub pages: Vec<Page>,
     pub navigation: Vec<NavItem>,
     pub theme: Option<ThemeConfig>,
+    pub globals: Option<serde_json::Value>,
 }
 
 pub struct Page {
@@ -89,6 +111,7 @@ pub struct Page {
     pub route: String,
     pub layout: Option<Layout>,
     pub elements: Vec<LayoutElement>,
+    pub condition: Option<String>,
 }
 
 pub struct LayoutElement {
@@ -107,24 +130,14 @@ pub struct Component {
 }
 ```
 
-### SDUI Engine
-
-```rust
-use tauri_shared::runtime::SduiEngine;
-
-let engine = SduiEngine::from(schema);
-let rendered = engine.render_page("/home")?;
-let value = engine.resolve_binding(&binding)?;
-```
-
 ### Grid System
 
 ```rust
-use tauri_shared::schema::{GridPosition, GridTemplate};
+use tauri_shared::schema::grid::{GridPosition, ResponsiveBreakpoints, ResponsiveClasses, NamedGridArea, GridElement};
 
 let pos = GridPosition {
-    column: Some(1),
-    row: Some(1),
+    column: Some("1".to_string()),
+    row: Some("1".to_string()),
     column_span: Some(2),
     row_span: Some(1),
 };
@@ -153,25 +166,15 @@ let provider = create_json_provider()?;
 let provider = create_json_provider_with_config(path, max_size)?;
 ```
 
-## Sync Engine
+### SchemaSyncService
+
+Sync schemas between local JSON files and MongoDB cloud:
 
 ```rust
-use tauri_shared::sync::{SyncEngine, SyncQueue, SyncOperation, MongoBridge};
+use tauri_shared::storage::{SchemaSyncService, SchemaSyncState, SchemaConfig};
 
-pub enum SyncOperation {
-    Create,
-    Update,
-    Delete,
-}
-
-pub struct SyncQueue {
-    pub operations: Vec<SyncOperation>,
-}
-
-// MongoBridge for cloud sync
-let bridge = MongoBridge::new(uri, db_name);
-let sync_engine = SyncEngine::new(bridge, queue);
-sync_engine.sync_to_cloud().await?;
+let sync_service = SchemaSyncService::new(config, provider);
+sync_service.sync_schema("my-schema").await?;
 ```
 
 ## RBAC
@@ -228,6 +231,21 @@ pub enum Status {
 }
 ```
 
+### Response Constructors
+
+```rust
+Response::success(data, Some("message"));
+Response::created(data);
+Response::updated(data);
+Response::deleted(data);
+Response::error("Something went wrong");
+Response::error_with_data(data, "Error with data");
+Response::validation_error("Invalid input");
+Response::not_found("Item not found");
+Response::unauthorized();
+Response::forbidden();
+```
+
 ## Logging
 
 ```rust
@@ -251,95 +269,82 @@ pub enum LogLevel {
 }
 ```
 
-## Migration System
+## HTTP Client
 
 ```rust
-use tauri_shared::migration::{Migration, MigrationError};
+use tauri_shared::http_client::{HttpClient, HttpResponse};
 
-pub struct MyMigration;
-
-#[async_trait::async_trait]
-impl Migration for MyMigration {
-    fn id(&self) -> &str { "001" }
-    fn description(&self) -> &str { "Create users table" }
-
-    async fn up(&self, db: &Database) -> Result<(), MigrationError> {
-        db.execute("CREATE TABLE users ...").await?;
-        Ok(())
-    }
-
-    async fn down(&self, db: &Database) -> Result<(), MigrationError> {
-        db.execute("DROP TABLE users").await?;
-        Ok(())
-    }
-}
+let client = HttpClient::new("https://api.example.com".to_string());
+let response: HttpResponse<serde_json::Value> = client.get("/endpoint").await?;
 ```
 
-## LRU Cache
+## WebSocket Client
 
 ```rust
-use tauri_shared::lru::LruCache;
+use tauri_shared::websocket::WsClient;
 
-let mut cache = LruCache::new(capacity);
-cache.put("key", "value");
-let value = cache.get("key");
+let ws = WsClient::new("wss://api.example.com/ws".to_string());
+ws.send("hello".to_string()).await?;
+let msg = ws.receive().await?;
+```
+
+## Auto-Update
+
+```rust
+use tauri_shared::update::{
+    check_for_update, download_update, install_update,
+    check_for_update_command, get_current_version,
+};
+
+let update_info = check_for_update().await?;
+let version = get_current_version();
+```
+
+## Extension System (Designer)
+
+```rust
+use tauri_shared::extension::{DesignerExtension, designer_extension, init_extensions_with_app};
+
+pub struct MyExtension;
+
+impl DesignerExtension for MyExtension {
+    fn name(&self) -> &str { "my-extension" }
+    fn register_commands(&self, app: &mut tauri::App) {
+        app.register_command("myCommand", |app, args| async move {
+            Ok(serde_json::json!({ "result": "success" }))
+        });
+    }
+}
+
+designer_extension!(MyExtension);
+
+// In your app setup:
+init_extensions_with_app(&mut app);
 ```
 
 ## Algorithms (feature = "algorithms")
 
 Requires `features = ["algorithms"]` in Cargo.toml.
 
-```rust
-use tauri_shared::algorithms::{sort, search, graph};
+### Validation
 
-let sorted = merge_sort(&[3, 1, 4, 1, 5]);
-let found = binary_search(&sorted, &4);
-let path = dijkstra(&graph, start, end);
+```rust
+use tauri_shared::algorithms::ValidationAlgorithm;
+
+ValidationAlgorithm::validate_input("hello", 10);  // true
+ValidationAlgorithm::validate_email("test@example.com");  // true
+ValidationAlgorithm::sanitize_input("hello world!");  // "hello world"
 ```
 
-### Sorting
-- `bubble_sort`
-- `insertion_sort`
-- `merge_sort`
-- `quick_sort`
-
-### Searching
-- `binary_search`
-- `linear_search`
-
-### Graph
-- `dijkstra`
-- `bfs`
-- `dfs`
-
-## TypeScript Bindings Generator
-
-Generate TypeScript interfaces from Rust structs:
+### Search
 
 ```rust
-use tauri_shared::typescript::{generate_typescript_bindings, ToTypeScript};
+use tauri_shared::algorithms::SearchAlgorithm;
 
-#[derive(ToTypeScript)]
-pub struct User {
-    pub id: String,
-    pub name: String,
-    pub email: String,
-}
+let items = vec!["schema1", "schema2", "schema3"];
+let results = SearchAlgorithm::search_schemas(&items, "schema1");  // ["schema1"]
 
-let ts_code = generate_typescript_bindings::<User>();
-// Output: "export interface User { id: string; name: string; email: string; }"
-```
-
-## i18n
-
-```rust
-use tauri_shared::i18n::translate;
-
-let translated = translate(
-    "hello",
-    &[("name", "Alice")],
-    &locale,
-)?;
+let paginated = SearchAlgorithm::paginate(&[1, 2, 3, 4, 5], 1, 2);  // [1, 2]
 ```
 
 ## Validation
@@ -371,19 +376,6 @@ match result {
     Err(e) => handle_other(e),
 }
 ```
-
-## Entity Commands (CRUD)
-
-Use the `impl_entity_commands_inner!` macro to generate CRUD commands for an entity:
-
-```rust
-use tauri_shared::macros::impl_entity_commands_inner;
-use tauri_shared::crud::{CrudFilter, CrudQuery};
-
-impl_entity_commands_inner!(UserEntity, "users");
-```
-
-This generates: `entity_create`, `entity_read`, `entity_update`, `entity_delete`, `entity_list`, `entity_count`.
 
 ## License
 

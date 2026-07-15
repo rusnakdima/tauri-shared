@@ -8,7 +8,7 @@ use super::page::GridPosition;
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
-pub struct TailwindBreakpoints {
+pub struct ResponsiveBreakpoints {
   #[serde(default = "default_mobile_cols")]
   pub mobile_cols: i32,
   #[serde(default)]
@@ -42,7 +42,7 @@ fn default_gap() -> String {
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
-pub struct TailwindGridArea {
+pub struct NamedGridArea {
   pub name: String,
   #[serde(default)]
   pub col_start: Option<i32>,
@@ -57,7 +57,7 @@ pub struct TailwindGridArea {
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
-pub struct TailwindResponsiveClasses {
+pub struct ResponsiveClasses {
   #[serde(default)]
   pub sm: Option<String>,
   #[serde(default)]
@@ -71,7 +71,7 @@ pub struct TailwindResponsiveClasses {
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
-pub struct TailwindGridElement {
+pub struct GridElement {
   pub id: String,
   pub component_id: String,
   #[ts(skip)]
@@ -81,7 +81,7 @@ pub struct TailwindGridElement {
   #[serde(default)]
   pub grid_position: GridPosition,
   #[serde(default)]
-  pub responsive_classes: Option<TailwindResponsiveClasses>,
+  pub responsive_classes: Option<ResponsiveClasses>,
   #[serde(default)]
   pub slot: Option<String>,
 }

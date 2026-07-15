@@ -28,6 +28,106 @@ mod tests {
     store.delete("key");
     assert_eq!(store.get("key"), None);
   }
+
+  #[test]
+  fn test_signal_store_edge_values() {
+    let store = SignalStore::new();
+    // Null value
+    store.set("null_key", serde_json::Value::Null);
+    assert_eq!(store.get("null_key"), Some(serde_json::Value::Null));
+    // Boolean
+    store.set("bool_key", serde_json::json!(true));
+    assert_eq!(store.get("bool_key"), Some(serde_json::json!(true)));
+    // Array
+    store.set("array_key", serde_json::json!([1, 2, 3]));
+    assert_eq!(store.get("array_key"), Some(serde_json::json!([1, 2, 3])));
+    // Object
+    store.set("obj_key", serde_json::json!({"nested": "value"}));
+    assert_eq!(
+      store.get("obj_key"),
+      Some(serde_json::json!({"nested": "value"}))
+    );
+    // Empty string key
+    store.set("", serde_json::json!("empty_key_value"));
+    assert_eq!(store.get(""), Some(serde_json::json!("empty_key_value")));
+  }
+
+  #[test]
+  fn test_signal_store_update_with_function() {
+    let store = SignalStore::new();
+    store.set("text", serde_json::json!("hello"));
+    store.update("text", |v| {
+      serde_json::json!(format!("{} world", v.as_str().unwrap()))
+    });
+    assert_eq!(store.get("text"), Some(serde_json::json!("hello world")));
+  }
+
+  #[test]
+  fn test_signal_store_delete_nonexistent() {
+    let store = SignalStore::new();
+    // Deleting a non-existent key should not panic
+    store.delete("nonexistent");
+    assert_eq!(store.get("nonexistent"), None);
+  }
+
+  #[test]
+  fn test_signal_store_subscription_notifications() {
+    use std::sync::{Arc, Mutex};
+
+    let store = SignalStore::new();
+    let notifications: Arc<Mutex<Vec<(String, serde_json::Value)>>> =
+      Arc::new(Mutex::new(Vec::new()));
+    let notifications_clone = notifications.clone();
+
+    store.subscribe(move |key, value| {
+      if let Ok(mut notifications) = notifications_clone.lock() {
+        notifications.push((key.to_string(), value.clone()));
+      }
+    });
+    store.set("key1", serde_json::json!("value1"));
+    store.set("key2", serde_json::json!("value2"));
+    store.update("key1", |_v| serde_json::json!("updated"));
+
+    let notifications = notifications.lock().unwrap();
+    assert_eq!(notifications.len(), 3);
+    assert_eq!(notifications[0].0, "key1");
+    assert_eq!(notifications[0].1, serde_json::json!("value1"));
+    assert_eq!(notifications[1].0, "key2");
+    assert_eq!(notifications[2].0, "key1");
+    assert_eq!(notifications[2].1, serde_json::json!("updated"));
+  }
+
+  #[test]
+  fn test_signal_store_keys() {
+    let store = SignalStore::new();
+    store.set("key1", serde_json::json!("value1"));
+    store.set("key2", serde_json::json!("value2"));
+    let keys = store.keys();
+    assert!(keys.contains(&"key1".to_string()));
+    assert!(keys.contains(&"key2".to_string()));
+  }
+
+  #[test]
+  fn test_signal_store_to_json_from_json() {
+    let store = SignalStore::new();
+    store.set("key1", serde_json::json!("value1"));
+    store.set("key2", serde_json::json!(42));
+    let json = store.to_json();
+    assert_eq!(json["key1"], serde_json::json!("value1"));
+    assert_eq!(json["key2"], serde_json::json!(42));
+    let store2 = SignalStore::new();
+    store2.from_json(json.clone());
+    assert_eq!(store2.get("key1"), Some(serde_json::json!("value1")));
+    assert_eq!(store2.get("key2"), Some(serde_json::json!(42)));
+  }
+
+  #[test]
+  fn test_signal_store_update_nonexistent_key() {
+    let store = SignalStore::new();
+    // Update on non-existent key should not panic
+    store.update("nonexistent", |_v| serde_json::json!("updated"));
+    assert_eq!(store.get("nonexistent"), None);
+  }
 }
 
 pub struct SignalStore {

@@ -26,31 +26,67 @@ pub async fn create_json_provider_with_config(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use tempfile::tempdir;
 
-  #[tokio::test]
-  async fn test_create_provider() {
-    let dir = tempdir().unwrap();
-    let provider = create_json_provider(dir.path()).await;
-    assert!(provider.is_ok());
+  fn create_temp_dir() -> std::path::PathBuf {
+    let temp = std::env::temp_dir();
+    let unique_dir = temp.join(format!("test_provider_{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&unique_dir).unwrap();
+    unique_dir
+  }
+
+  fn cleanup_temp_dir(path: &std::path::Path) {
+    let _ = std::fs::remove_dir_all(path);
   }
 
   #[tokio::test]
-  async fn test_insert_and_find() {
-    let dir = tempdir().unwrap();
-    let provider = create_json_provider(dir.path()).await.unwrap();
+  async fn test_create_provider() {
+    let dir = create_temp_dir();
+    let provider = create_json_provider(&dir).await;
+    assert!(provider.is_ok());
+    cleanup_temp_dir(&dir);
+  }
+
+  #[tokio::test]
+  async fn test_find_nonexistent() {
+    let dir = create_temp_dir();
+    let provider = create_json_provider(&dir).await.unwrap();
+    let found = provider
+      .find_by_id("test_collection", "nonexistent-id")
+      .await;
+    assert!(found.is_ok());
+    assert!(found.unwrap().is_none());
+    cleanup_temp_dir(&dir);
+  }
+
+  #[tokio::test]
+  async fn test_delete_existing() {
+    let dir = create_temp_dir();
+    let provider = create_json_provider(&dir).await.unwrap();
 
     let doc = serde_json::json!({
-        "_id": "test-1",
-        "name": "Test Document",
-        "value": 42
+        "_id": "delete-test",
+        "name": "To Be Deleted"
     });
 
-    let inserted = provider.insert("test_collection", doc).await;
-    assert!(inserted.is_ok());
+    provider.insert("test_collection", doc).await.unwrap();
+    let deleted = provider.delete("test_collection", "delete-test").await;
+    assert!(deleted.is_ok());
 
-    let found = provider.find_by_id("test_collection", "test-1").await;
-    assert!(found.is_ok());
-    assert!(found.unwrap().is_some());
+    let found = provider
+      .find_by_id("test_collection", "delete-test")
+      .await
+      .unwrap();
+    assert!(found.is_none());
+    cleanup_temp_dir(&dir);
+  }
+
+  #[tokio::test]
+  async fn test_delete_nonexistent() {
+    let dir = create_temp_dir();
+    let provider = create_json_provider(&dir).await.unwrap();
+    // Deleting non-existent should not panic
+    let result = provider.delete("test_collection", "nonexistent-id").await;
+    assert!(result.is_ok());
+    cleanup_temp_dir(&dir);
   }
 }

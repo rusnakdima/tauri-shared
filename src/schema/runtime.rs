@@ -38,11 +38,7 @@ impl RenderedPage {
         .iter()
         .map(|(k, v)| (k.clone(), RenderedSection::from(v.clone())))
         .collect(),
-      canvas_elements: page
-        .canvas_elements
-        .iter()
-        .map(RenderedElement::from)
-        .collect(),
+      canvas_elements: page.canvas_elements.iter().map(|e| e.into()).collect(),
       resolved_bindings: HashMap::new(),
     }
   }
@@ -105,7 +101,7 @@ pub struct RenderedElement {
 }
 
 impl RenderedElement {
-  pub fn from(element: &CanvasElement) -> Self {
+  pub fn from_canvas_element(element: &CanvasElement) -> Self {
     Self {
       id: element.id.clone(),
       component_id: element.component_id.clone(),
@@ -119,40 +115,9 @@ impl RenderedElement {
   }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct RenderedCanvasElement {
-  pub id: String,
-  pub component_id: String,
-  #[serde(default)]
-  pub grid_position: GridPosition,
-  #[serde(default)]
-  #[ts(skip)]
-  pub props: HashMap<String, serde_json::Value>,
-  #[serde(default)]
-  #[ts(skip)]
-  pub resolved_props: Option<serde_json::Value>,
-  #[serde(default)]
-  pub classes: String,
-  #[serde(default)]
-  pub children: Vec<String>,
-  #[serde(default)]
-  pub data_binding: Option<crate::schema::DataBinding>,
-}
-
-impl From<&CanvasElement> for RenderedCanvasElement {
+impl From<&CanvasElement> for RenderedElement {
   fn from(e: &CanvasElement) -> Self {
-    Self {
-      id: e.id.clone(),
-      component_id: e.component_id.clone(),
-      grid_position: e.grid_position.clone(),
-      props: e.props.clone(),
-      resolved_props: None,
-      classes: e.classes.clone(),
-      children: e.children.clone(),
-      data_binding: e.data_binding.clone(),
-    }
+    Self::from_canvas_element(e)
   }
 }
 
