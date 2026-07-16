@@ -19,3 +19,15 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Angular
+.angular/
+
+# Angular
+.angular/
+
+# Angular
+.angular/
+
+# Angular cache (nested)
+**/.angular/
