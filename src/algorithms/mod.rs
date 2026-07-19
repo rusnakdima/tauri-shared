@@ -1,3 +1,17 @@
+pub mod graph;
+pub mod registry;
+pub mod search;
+pub mod sorting;
+
+pub use registry::AlgorithmRegistry;
+
+pub use graph::{Graph, GraphEdge, GraphNode};
+pub use search::SearchAlgorithm;
+pub use sorting::{
+  bubble_sort, bubble_sort_by, insertion_sort, insertion_sort_by, merge_sort, merge_sort_by,
+  quick_sort, quick_sort_by,
+};
+
 #[cfg(test)]
 mod tests {
   use super::*;

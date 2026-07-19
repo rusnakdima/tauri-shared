@@ -43,16 +43,12 @@ mod tests {
 
   #[test]
   fn test_search_schemas_with_struct() {
-    #[derive(Clone, AsRef_str)]
-    struct NamedItem {
-        name: String,
-    }
-    let items = vec![
-        NamedItem { name: "schema1".to_string() },
-        NamedItem { name: "schema2".to_string() },
-    ];
+    // search_schemas requires T: AsRef<str> + Clone, returns matching items as-is
+    // For struct-like search, use string fields directly
+    let items = vec!["schema1".to_string(), "schema2".to_string()];
     let result = SearchAlgorithm::search_schemas(&items, "schema1");
     assert_eq!(result.len(), 1);
+    assert_eq!(result[0], "schema1");
   }
 
   #[test]
@@ -116,26 +112,26 @@ mod tests {
 pub struct SearchAlgorithm;
 
 impl SearchAlgorithm {
-    pub fn search_schemas<T>(items: &[T], query: &str) -> Vec<T>
-    where
-        T: AsRef<str> + Clone,
-    {
-        let query = query.to_lowercase();
-        items
-            .iter()
-            .filter(|s| s.as_ref().to_lowercase().contains(&query))
-            .cloned()
-            .collect()
-    }
+  pub fn search_schemas<T>(items: &[T], query: &str) -> Vec<T>
+  where
+    T: AsRef<str> + Clone,
+  {
+    let query = query.to_lowercase();
+    items
+      .iter()
+      .filter(|s| s.as_ref().to_lowercase().contains(&query))
+      .cloned()
+      .collect()
+  }
 
-    pub fn paginate<T>(items: &[T], page: u64, limit: u64) -> Vec<T> {
-        let start = ((page - 1) * limit) as usize;
-        let end = start + limit as usize;
+  pub fn paginate<T: Clone>(items: &[T], page: u64, limit: u64) -> Vec<T> {
+    let start = ((page.saturating_sub(1)) * limit) as usize;
+    let end = start + limit as usize;
 
-        if start < items.len() {
-            items[start..items.len().min(end)].to_vec()
-        } else {
-            vec![]
-        }
+    if start < items.len() {
+      items[start..items.len().min(end)].to_vec()
+    } else {
+      vec![]
     }
+  }
 }
