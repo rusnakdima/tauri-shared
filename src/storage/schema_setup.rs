@@ -6,10 +6,7 @@
 use crate::log_info;
 use crate::storage::json_provider::JsonProviderState;
 use crate::storage::schema_sync_service::SchemaSyncService;
-use crate::storage::signal_store::SignalStore;
 use nosql_orm::prelude::*;
-use nosql_orm::provider::DatabaseProvider;
-use std::path::Path;
 use std::sync::Arc;
 
 /// Configuration for schema system initialization.
