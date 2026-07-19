@@ -30,6 +30,7 @@ tokio = { version = "1", features = ["rt"] }
 
 [features]
 default = []
+algorithms = []
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("tauri"))'] }
