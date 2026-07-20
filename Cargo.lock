@@ -4365,6 +4365,7 @@ dependencies = [
  "syn 1.0.109",
  "tauri",
  "tauri-plugin-shell",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "tokio-tungstenite",

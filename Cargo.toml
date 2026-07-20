@@ -27,6 +27,7 @@ bcrypt = "0.17"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt"] }
+tempfile = "3"
 
 [features]
 default = []
