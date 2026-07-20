@@ -1,221 +1,112 @@
-#[macro_export]
-macro_rules! define_crud_routes {
-  (
-        prefix: $prefix:ident,
-        accessor: $accessor:expr,
-        table: $table:expr,
-        methods: {
-            get: $method_get:ident,
-            get_all: $method_get_all:ident,
-            create: $method_create:ident,
-            update: $method_update:ident,
-            patch: $method_patch:ident,
-            delete: $method_delete:ident
-        }
-    ) => {
-    paste::paste! {
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _get>](
-            id: String,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_get($table, &id)
-                .await
-                .map_err(|e| e.to_string())?;
-            match result {
-                Some(data) => Ok(tauri_shared::response::Response::success(data, "Found")),
-                None => Ok(tauri_shared::response::Response::not_found(stringify!($prefix))),
-            }
-        }
-
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _get_all>](
-            filter: Option<serde_json::Value>,
-            skip: Option<u64>,
-            limit: Option<u64>,
-            sort_by: Option<String>,
-            sort_asc: Option<bool>,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<Vec<serde_json::Value>>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_get_all($table, filter, skip, limit, sort_by, sort_asc.unwrap_or(true))
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::success(result, "Found"))
-        }
-
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _create>](
-            data: serde_json::Value,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_create($table, data)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::created(result))
-        }
-
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _update>](
-            id: String,
-            data: serde_json::Value,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_update($table, &id, data)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::updated(result))
-        }
-
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _patch>](
-            id: String,
-            patch: serde_json::Value,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_patch($table, &id, patch)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::updated(result))
-        }
-
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _delete>](
-            id: String,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_delete($table, &id)
-                .await
-                .map_err(|e| e.to_string())?;
-            if result {
-                Ok(tauri_shared::response::Response::deleted(serde_json::Value::Null))
-            } else {
-                Ok(tauri_shared::response::Response::error(
-                    "Delete failed",
-                ))
-            }
-        }
-    }
-  };
-}
+//! CRUD macro for generating Tauri commands from JsonProvider.
+//!
+//! ## Usage
+//!
+//! ```rust,ignore
+//! use nosql_orm::provider::DatabaseProvider;
+//! use nosql_orm::providers::JsonProvider;
+//! use tauri::State;
+//! use tauri_shared::define_json_crud_routes;
+//!
+//! // JsonProvider is managed via `app.manage(provider)` in lib.rs
+//! define_json_crud_routes!(
+//!     prefix: test_entity,
+//!     table: "test_entities"
+//! );
+//! ```
+//!
+//! This generates 5 commands:
+//! - `{prefix}_get`      → `DatabaseProvider::find_by_id(table, &id)`
+//! - `{prefix}_get_all`  → `DatabaseProvider::find_all(table)`
+//! - `{prefix}_create`   → `DatabaseProvider::insert(table, data)` with auto-generated UUID
+//! - `{prefix}_update`   → `DatabaseProvider::update(table, &id, data)`
+//! - `{prefix}_delete`   → `DatabaseProvider::delete(table, &id)`
+//!
+//! All commands use `#[tauri::command(rename_all = "snake_case")]` and return
+//! `Result<Response<T>, String>` with proper Response status codes.
 
 #[macro_export]
-macro_rules! define_crud_routes_no_table {
-  (
+macro_rules! define_json_crud_routes {
+    (
         prefix: $prefix:ident,
-        accessor: $accessor:expr,
-        methods: {
-            get: $method_get:ident,
-            get_all: $method_get_all:ident,
-            create: $method_create:ident,
-            update: $method_update:ident,
-            patch: $method_patch:ident,
-            delete: $method_delete:ident
-        }
+        table: $table:expr
     ) => {
-    paste::paste! {
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _get>](
-            id: String,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_get(&id)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::success(result, "Found"))
-        }
+        paste::paste! {
+            /// Get a single entity by ID
+            #[allow(dead_code)]
+            #[tauri::command(rename_all = "snake_case")]
+            pub async fn [<$prefix _get>](
+                id: String,
+                db: tauri::State<'_, nosql_orm::providers::JsonProvider>,
+            ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
+                match db.find_by_id($table, &id).await {
+                    Ok(Some(data)) => Ok(tauri_shared::response::Response::success(data, Some("Found"))),
+                    Ok(None) => Ok(tauri_shared::response::Response::not_found(stringify!($prefix))),
+                    Err(e) => Ok(tauri_shared::response::Response::error(e.to_string())),
+                }
+            }
 
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _get_all>](
-            filter: Option<serde_json::Value>,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<Vec<serde_json::Value>>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_get_all(filter)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::success(result, "Found"))
-        }
+            /// Get all entities
+            #[allow(dead_code)]
+            #[tauri::command(rename_all = "snake_case")]
+            pub async fn [<$prefix _get_all>](
+                db: tauri::State<'_, nosql_orm::providers::JsonProvider>,
+            ) -> Result<tauri_shared::response::Response<Vec<serde_json::Value>>, String> {
+                match db.find_all($table).await {
+                    Ok(items) => Ok(tauri_shared::response::Response::success(items, Some("Found"))),
+                    Err(e) => Ok(tauri_shared::response::Response::error(e.to_string())),
+                }
+            }
 
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _create>](
-            data: serde_json::Value,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_create(data)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::created(result))
-        }
+            /// Create a new entity with auto-generated UUID
+            #[allow(dead_code)]
+            #[tauri::command(rename_all = "snake_case")]
+            pub async fn [<$prefix _create>](
+                data: serde_json::Value,
+                db: tauri::State<'_, nosql_orm::providers::JsonProvider>,
+            ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
+                let id = format!("{}_{}", stringify!($prefix), uuid::Uuid::new_v4());
+                let mut item = data;
+                if let Some(obj) = item.as_object_mut() {
+                    obj.insert("id".to_string(), serde_json::Value::String(id.clone()));
+                }
+                match db.insert($table, item).await {
+                    Ok(_) => Ok(tauri_shared::response::Response::created(serde_json::json!({"id": id}))),
+                    Err(e) => Ok(tauri_shared::response::Response::error(e.to_string())),
+                }
+            }
 
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _update>](
-            id: String,
-            data: serde_json::Value,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_update(&id, data)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::updated(result))
-        }
+            /// Full update using DatabaseProvider::update
+            #[allow(dead_code)]
+            #[tauri::command(rename_all = "snake_case")]
+            pub async fn [<$prefix _update>](
+                id: String,
+                data: serde_json::Value,
+                db: tauri::State<'_, nosql_orm::providers::JsonProvider>,
+            ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
+                let mut item = data;
+                if let Some(obj) = item.as_object_mut() {
+                    obj.insert("id".to_string(), serde_json::Value::String(id.clone()));
+                }
+                match db.update($table, &id, item).await {
+                    Ok(_) => Ok(tauri_shared::response::Response::updated(serde_json::json!({"id": id}))),
+                    Err(e) => Ok(tauri_shared::response::Response::error(e.to_string())),
+                }
+            }
 
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _patch>](
-            id: String,
-            patch: serde_json::Value,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_patch(&id, patch)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::updated(result))
+            /// Delete an entity
+            #[allow(dead_code)]
+            #[tauri::command(rename_all = "snake_case")]
+            pub async fn [<$prefix _delete>](
+                id: String,
+                db: tauri::State<'_, nosql_orm::providers::JsonProvider>,
+            ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
+                match db.delete($table, &id).await {
+                    Ok(true) => Ok(tauri_shared::response::Response::deleted(serde_json::Value::Null)),
+                    Ok(false) => Ok(tauri_shared::response::Response::error("Entity not found".to_string())),
+                    Err(e) => Ok(tauri_shared::response::Response::error(e.to_string())),
+                }
+            }
         }
-
-        #[allow(dead_code)]
-        #[tauri::command(rename_all = "snake_case")]
-        pub async fn [<$prefix _delete>](
-            id: String,
-            state: tauri::State<'_, Arc<AppState>>,
-        ) -> Result<tauri_shared::response::Response<serde_json::Value>, String> {
-            let service = ($accessor)(&state);
-            let result = service
-                .$method_delete(&id)
-                .await
-                .map_err(|e| e.to_string())?;
-            Ok(tauri_shared::response::Response::deleted(result))
-        }
-    }
-  };
+    };
 }

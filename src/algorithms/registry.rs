@@ -144,6 +144,275 @@ impl AlgorithmRegistry {
       }),
     );
 
+    // BFS — breadth-first search returning visited node ids in order
+    self.register(
+      "graph.bfs".to_string(),
+      Box::new(|input| {
+        #[derive(serde::Deserialize)]
+        struct BfsInput {
+          nodes: Vec<GraphNode>,
+          edges: Vec<GraphEdge>,
+          start: String,
+        }
+        let input: BfsInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let mut graph = Graph::new();
+        for node in input.nodes {
+          graph.add_node(&node.id, node.data);
+        }
+        for edge in input.edges {
+          graph.add_edge(&edge.from, &edge.to, edge.weight);
+        }
+        let node_ids: Vec<&str> = graph.nodes.iter().map(|n| n.id.as_str()).collect();
+        let mut adj: std::collections::HashMap<&str, Vec<&str>> = std::collections::HashMap::new();
+        for id in &node_ids {
+          adj.entry(id).or_default();
+        }
+        for edge in &graph.edges {
+          adj
+            .entry(edge.from.as_str())
+            .or_default()
+            .push(edge.to.as_str());
+          adj
+            .entry(edge.to.as_str())
+            .or_default()
+            .push(edge.from.as_str());
+        }
+        let mut visited = std::collections::HashSet::new();
+        let mut result: Vec<String> = Vec::new();
+        let mut queue: std::collections::VecDeque<&str> =
+          std::collections::VecDeque::from(vec![input.start.as_str()]);
+        while let Some(node) = queue.pop_front() {
+          if visited.contains(&node) {
+            continue;
+          }
+          visited.insert(node);
+          result.push(node.to_string());
+          if let Some(neighbors) = adj.get(node) {
+            for &n in neighbors {
+              if !visited.contains(&n) {
+                queue.push_back(n);
+              }
+            }
+          }
+        }
+        Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
+      }),
+    );
+
+    // DFS — depth-first search returning visited node ids in order
+    self.register(
+      "graph.dfs".to_string(),
+      Box::new(|input| {
+        #[derive(serde::Deserialize)]
+        struct DfsInput {
+          nodes: Vec<GraphNode>,
+          edges: Vec<GraphEdge>,
+          start: String,
+        }
+        let input: DfsInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let mut graph = Graph::new();
+        for node in input.nodes {
+          graph.add_node(&node.id, node.data);
+        }
+        for edge in input.edges {
+          graph.add_edge(&edge.from, &edge.to, edge.weight);
+        }
+        let node_ids: Vec<&str> = graph.nodes.iter().map(|n| n.id.as_str()).collect();
+        let mut adj: std::collections::HashMap<&str, Vec<&str>> = std::collections::HashMap::new();
+        for id in &node_ids {
+          adj.entry(id).or_default();
+        }
+        for edge in &graph.edges {
+          adj
+            .entry(edge.from.as_str())
+            .or_default()
+            .push(edge.to.as_str());
+          adj
+            .entry(edge.to.as_str())
+            .or_default()
+            .push(edge.from.as_str());
+        }
+        let mut visited = std::collections::HashSet::new();
+        let mut result: Vec<String> = Vec::new();
+        let mut stack: Vec<&str> = vec![input.start.as_str()];
+        while let Some(node) = stack.pop() {
+          if visited.contains(&node) {
+            continue;
+          }
+          visited.insert(node);
+          result.push(node.to_string());
+          if let Some(neighbors) = adj.get(node) {
+            for &n in neighbors {
+              if !visited.contains(&n) {
+                stack.push(n);
+              }
+            }
+          }
+        }
+        Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
+      }),
+    );
+
+    // Topological sort — Kahn's algorithm, returns nodes in dependency order
+    self.register(
+      "graph.topological_sort".to_string(),
+      Box::new(|input| {
+        #[derive(serde::Deserialize)]
+        struct TopoInput {
+          nodes: Vec<GraphNode>,
+          edges: Vec<GraphEdge>,
+        }
+        let input: TopoInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let mut graph = Graph::new();
+        for node in input.nodes {
+          graph.add_node(&node.id, node.data);
+        }
+        for edge in &input.edges {
+          graph.add_edge(&edge.from, &edge.to, edge.weight);
+        }
+        let mut in_degree: std::collections::HashMap<&str, usize> =
+          std::collections::HashMap::new();
+        for node in &graph.nodes {
+          in_degree.entry(node.id.as_str()).or_insert(0);
+        }
+        let mut adj: std::collections::HashMap<&str, Vec<&str>> = std::collections::HashMap::new();
+        for id in graph.nodes.iter().map(|n| n.id.as_str()) {
+          adj.entry(id).or_default();
+        }
+        for edge in &graph.edges {
+          adj
+            .entry(edge.from.as_str())
+            .or_default()
+            .push(edge.to.as_str());
+          *in_degree.entry(edge.to.as_str()).or_insert(0) += 1;
+        }
+        let mut queue: Vec<&str> = Vec::new();
+        for (id, &deg) in &in_degree {
+          if deg == 0 {
+            queue.push(id);
+          }
+        }
+        let mut result: Vec<String> = Vec::new();
+        while let Some(node) = queue.pop() {
+          result.push(node.to_string());
+          if let Some(neighbors) = adj.get(node) {
+            for &n in neighbors {
+              if let Some(d) = in_degree.get_mut(n) {
+                *d -= 1;
+                if *d == 0 {
+                  queue.push(n);
+                }
+              }
+            }
+          }
+        }
+        Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
+      }),
+    );
+
+    // Tree algorithms
+    self.register(
+      "tree.build".to_string(),
+      Box::new(|input| {
+        #[derive(serde::Deserialize)]
+        struct TreeNode {
+          id: String,
+          #[serde(default)]
+          parent_id: Option<String>,
+          #[serde(flatten)]
+          data: serde_json::Value,
+        }
+        let items: Vec<TreeNode> = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let mut map: std::collections::HashMap<String, serde_json::Value> =
+          std::collections::HashMap::new();
+        let mut children_map: std::collections::HashMap<String, Vec<serde_json::Value>> =
+          std::collections::HashMap::new();
+        for item in &items {
+          map.insert(item.id.clone(), item.data.clone());
+          children_map.entry(item.id.clone()).or_default();
+        }
+        let mut roots: Vec<serde_json::Value> = Vec::new();
+        for item in &items {
+          if let Some(ref pid) = item.parent_id {
+            if map.contains_key(pid) {
+              let node = serde_json::json!({
+                "id": item.id.clone(),
+                "parentId": pid,
+                "children": Vec::<serde_json::Value>::new(),
+              });
+              children_map.entry(pid.clone()).or_default().push(node);
+            } else {
+              let node = serde_json::json!({
+                "id": item.id.clone(),
+                "parentId": serde_json::Value::Null,
+                "children": Vec::<serde_json::Value>::new(),
+              });
+              roots.push(node);
+            }
+          } else {
+            let node = serde_json::json!({
+              "id": item.id.clone(),
+              "parentId": serde_json::Value::Null,
+              "children": Vec::<serde_json::Value>::new(),
+            });
+            roots.push(node);
+          }
+        }
+        // Attach children recursively
+        fn attach_children(
+          nodes: &mut [serde_json::Value],
+          children_map: &std::collections::HashMap<String, Vec<serde_json::Value>>,
+        ) {
+          for node in nodes.iter_mut() {
+            if let Some(id) = node.get("id").and_then(|v| v.as_str()) {
+              if let Some(children) = children_map.get(id) {
+                if let Some(obj) = node.as_object_mut() {
+                  obj.insert("children".to_string(), serde_json::json!(children));
+                  let mut slice = (*children).to_vec();
+                  attach_children(&mut slice, children_map);
+                  *obj.get_mut("children").unwrap() = serde_json::json!(slice);
+                }
+              }
+            }
+          }
+        }
+        attach_children(&mut roots, &children_map);
+        Ok(serde_json::to_value(roots).map_err(|e| e.to_string())?)
+      }),
+    );
+
+    self.register(
+      "tree.flatten".to_string(),
+      Box::new(|input| {
+        #[derive(serde::Deserialize)]
+        #[serde(untagged)]
+        enum TreeNode {
+          WithChildren { id: String, children: Vec<TreeNode> },
+          Leaf { id: String },
+        }
+        fn flatten_nodes(nodes: &[TreeNode], result: &mut Vec<serde_json::Value>) {
+          for node in nodes {
+            let (id, children): (&str, Option<&[TreeNode]>) = match node {
+              TreeNode::WithChildren { id, children } => (id.as_str(), Some(children.as_slice())),
+              TreeNode::Leaf { id } => (id.as_str(), None),
+            };
+            let obj = serde_json::json!({
+              "id": id,
+              "children": Vec::<serde_json::Value>::new(),
+            });
+            result.push(obj);
+            if let Some(c) = children {
+              flatten_nodes(c, result);
+            }
+          }
+        }
+        let nodes: Vec<TreeNode> = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let mut result: Vec<serde_json::Value> = Vec::new();
+        flatten_nodes(&nodes, &mut result);
+        Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
+      }),
+    );
+
     // Validation algorithms
     self.register(
       "validate.email".to_string(),
