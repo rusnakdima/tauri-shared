@@ -62,3 +62,41 @@ pub fn clear_logs() -> Result<Response<()>> {
   Logger::global().clear();
   Ok(Response::success((), Some("Logs cleared")))
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[tokio::test]
+  async fn test_write_log_info() {
+    let result = write_log_to_file("info".to_string(), "test info message".to_string(), None);
+    assert!(result.is_ok());
+  }
+
+  #[tokio::test]
+  async fn test_write_log_error() {
+    let result = write_log_to_file("error".to_string(), "test error message".to_string(), None);
+    assert!(result.is_ok());
+  }
+
+  #[tokio::test]
+  async fn test_set_and_get_log_level() {
+    let result = set_log_level("debug".to_string());
+    assert!(result.is_ok());
+    let get_result = get_log_level();
+    assert!(get_result.is_ok());
+  }
+
+  #[tokio::test]
+  async fn test_get_log_entries() {
+    let _ = write_log_to_file("info".to_string(), "test".to_string(), None);
+    let result = get_log_entries();
+    assert!(result.is_ok());
+  }
+
+  #[tokio::test]
+  async fn test_clear_logs() {
+    let result = clear_logs();
+    assert!(result.is_ok());
+  }
+}
