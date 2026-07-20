@@ -111,3 +111,55 @@ impl CrudService {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use tempfile::TempDir;
+
+  #[tokio::test]
+  async fn test_crud_get_all() {
+    let temp_dir = TempDir::new().unwrap();
+    let items_path = temp_dir.path().join("items.json");
+    std::fs::write(
+      &items_path,
+      r#"[{"id": "1", "name": "Test Item", "value": 42}]"#,
+    )
+    .unwrap();
+    let provider = JsonProvider::new(temp_dir.path().to_str().unwrap())
+      .await
+      .unwrap();
+    let crud = CrudService::new(provider);
+    let result = crud.execute("get_all", "items", None, None, None).await;
+    assert!(result.is_ok());
+    let resp = result.unwrap();
+    assert!(resp.data.as_ref().expect("data must exist").is_array());
+    let data = resp.data.unwrap();
+    let arr = data.as_array().unwrap();
+    assert!(!arr.is_empty());
+  }
+
+  #[tokio::test]
+  async fn test_crud_count() {
+    let temp_dir = TempDir::new().unwrap();
+    let items_path = temp_dir.path().join("items.json");
+    std::fs::write(&items_path, r#"[{"id": "1", "name": "Test Item"}]"#).unwrap();
+    let provider = JsonProvider::new(temp_dir.path().to_str().unwrap())
+      .await
+      .unwrap();
+    let crud = CrudService::new(provider);
+    let result = crud.execute("count", "items", None, None, None).await;
+    assert!(result.is_ok());
+  }
+
+  #[tokio::test]
+  async fn test_crud_unknown_operation() {
+    let temp_dir = TempDir::new().unwrap();
+    let provider = JsonProvider::new(temp_dir.path().to_str().unwrap())
+      .await
+      .unwrap();
+    let crud = CrudService::new(provider);
+    let result = crud.execute("invalid_op", "items", None, None, None).await;
+    assert!(result.is_err());
+  }
+}

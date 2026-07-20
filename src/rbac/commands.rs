@@ -187,3 +187,52 @@ pub async fn rbac_get_role_permissions(
     .map(|data| serde_json::from_value(data).map_err(|e| e.to_string()))
     .collect()
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use tempfile::TempDir;
+
+  #[tokio::test]
+  async fn test_rbac_list_roles() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().to_str().unwrap();
+    let provider = JsonProvider::new(path).await.unwrap();
+    let result = rbac_list_roles(&provider).await;
+    assert!(result.is_ok());
+  }
+
+  #[tokio::test]
+  async fn test_rbac_create_and_list_role() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().to_str().unwrap();
+    let provider = JsonProvider::new(path).await.unwrap();
+    let created = rbac_create_role(
+      &provider,
+      "admin".to_string(),
+      "Administrator role".to_string(),
+    )
+    .await;
+    assert!(created.is_ok());
+    let roles = rbac_list_roles(&provider).await;
+    assert!(roles.is_ok());
+    assert_eq!(roles.unwrap().len(), 1);
+  }
+
+  #[tokio::test]
+  async fn test_rbac_create_and_delete_role() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().to_str().unwrap();
+    let provider = JsonProvider::new(path).await.unwrap();
+    let created = rbac_create_role(
+      &provider,
+      "temp_role".to_string(),
+      "Temporary role".to_string(),
+    )
+    .await;
+    assert!(created.is_ok());
+    let role = created.unwrap();
+    let deleted = rbac_delete_role(&provider, role.id).await;
+    assert!(deleted.is_ok());
+  }
+}

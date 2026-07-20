@@ -82,3 +82,44 @@ pub async fn get_current_user(db: &JsonProvider, session_token: String) -> Resul
     None => Err("User not found".to_string()),
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use tempfile::TempDir;
+
+  #[tokio::test]
+  async fn test_login_unknown_user() {
+    let temp_dir = TempDir::new().unwrap();
+    // JsonProvider::new expects a directory path, it creates users.json, sessions.json etc. inside
+    let provider = JsonProvider::new(temp_dir.path().to_str().unwrap())
+      .await
+      .unwrap();
+    let result = login(
+      &provider,
+      "nobody@example.com".to_string(),
+      "wrong".to_string(),
+    )
+    .await;
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), "User not found");
+  }
+
+  #[tokio::test]
+  async fn test_register_and_login() {
+    let temp_dir = TempDir::new().unwrap();
+    let provider = JsonProvider::new(temp_dir.path().to_str().unwrap())
+      .await
+      .unwrap();
+    let reg_result = register(
+      &provider,
+      "testuser".to_string(),
+      "password123".to_string(),
+      "test@example.com".to_string(),
+    )
+    .await;
+    assert!(reg_result.is_ok());
+    let login_result = login(&provider, "testuser".to_string(), "password123".to_string()).await;
+    assert!(login_result.is_ok());
+  }
+}
