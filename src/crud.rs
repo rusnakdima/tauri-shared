@@ -14,6 +14,7 @@ pub struct PaginatedResult<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CrudFilter {
   pub field: String,
   pub op: String,
@@ -21,6 +22,7 @@ pub struct CrudFilter {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CrudQuery {
   pub filters: Vec<CrudFilter>,
   pub limit: Option<usize>,
@@ -37,7 +39,9 @@ impl Default for CrudQuery {
   }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct CrudResult<T> {
   pub data: Option<T>,
   pub list: Vec<T>,
