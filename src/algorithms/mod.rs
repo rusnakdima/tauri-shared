@@ -1,16 +1,23 @@
 pub mod graph;
 pub mod registry;
+pub mod sanitization;
 pub mod search;
 pub mod sorting;
 
-pub use registry::AlgorithmRegistry;
+pub use registry::{Algorithm, AlgorithmRegistry};
 
 pub use graph::{Graph, GraphEdge, GraphNode};
+pub use sanitization::{
+  cap_string, escape_html, sanitize_for_mongo, sanitize_for_overlay, strip_urls,
+};
 pub use search::SearchAlgorithm;
 pub use sorting::{
   bubble_sort, bubble_sort_by, insertion_sort, insertion_sort_by, merge_sort, merge_sort_by,
   quick_sort, quick_sort_by,
 };
+
+pub use nosql_orm::search::{FullTextSearch, TextSearch};
+pub use nosql_orm::validators::{EmailValidator, FieldValidator, Validate, ValidationError};
 
 #[cfg(test)]
 mod tests {
@@ -128,5 +135,12 @@ impl ValidationAlgorithm {
       .chars()
       .filter(|c| c.is_alphanumeric() || *c == ' ' || *c == '-')
       .collect()
+  }
+
+  pub fn calculate_percentage(completed: i32, total: i32) -> i32 {
+    if total == 0 {
+      return 0;
+    }
+    ((completed as f32 / total as f32) * 100.0) as i32
   }
 }

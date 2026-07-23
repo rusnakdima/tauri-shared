@@ -9,6 +9,15 @@ use crate::algorithms::{
 pub type AlgorithmFn =
   Box<dyn Fn(serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync>;
 
+/// Dynamically pluggable algorithm trait — implement this to add custom algorithms
+/// to the registry without modifying the core library.
+pub trait Algorithm: Send + Sync {
+  fn name(&self) -> &str;
+  fn domain(&self) -> &str;
+  fn execute(&self, input: serde_json::Value) -> Result<serde_json::Value, String>;
+  fn description(&self) -> &str;
+}
+
 #[derive(Default, Clone)]
 pub struct AlgorithmRegistry {
   algorithms: Arc<RwLock<HashMap<String, AlgorithmFn>>>,
@@ -23,7 +32,16 @@ impl AlgorithmRegistry {
     registry
   }
 
-  pub fn register(&self, name: String, func: AlgorithmFn) {
+  /// Register a function-based algorithm by name.
+  pub fn register_fn(&self, name: String, func: AlgorithmFn) {
+    let mut algorithms = self.algorithms.write().unwrap();
+    algorithms.insert(name, func);
+  }
+
+  /// Register a dynamically pluggable algorithm via the `Algorithm` trait.
+  pub fn register(&self, algo: Box<dyn Algorithm>) {
+    let name = algo.name().to_string();
+    let func: AlgorithmFn = Box::new(move |input| algo.execute(input));
     let mut algorithms = self.algorithms.write().unwrap();
     algorithms.insert(name, func);
   }
@@ -41,50 +59,155 @@ impl AlgorithmRegistry {
     algorithms.keys().cloned().collect()
   }
 
+  pub fn register_dyn(
+    &mut self,
+    name: String,
+    handler: Box<dyn Fn(serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync>,
+  ) {
+    let mut algorithms = self.algorithms.write().unwrap();
+    algorithms.insert(name, handler);
+  }
+
+  pub fn register_from(
+    &mut self,
+    algorithms: impl IntoIterator<
+      Item = (
+        String,
+        Box<dyn Fn(serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync>,
+      ),
+    >,
+  ) {
+    let mut inner = self.algorithms.write().unwrap();
+    for (name, handler) in algorithms {
+      inner.insert(name, handler);
+    }
+  }
+
   fn register_builtins(&self) {
-    // Sorting algorithms — use json_sort with serde_json::Value-aware comparison
-    self.register(
+    // Sorting algorithms — accept structured input { data: T[], field?: string, order?: 'asc' | 'desc' }
+    // AlgorithmService sends { data: items, field, order } format
+    self.register_fn(
       "sort.bubble".to_string(),
       Box::new(|input| {
-        let mut data: Vec<serde_json::Value> =
-          serde_json::from_value(input).map_err(|e| e.to_string())?;
-        json_bubble_sort(&mut data);
+        #[derive(serde::Deserialize)]
+        struct SortInput {
+          data: Vec<serde_json::Value>,
+          #[serde(default)]
+          field: Option<String>,
+          #[serde(default)]
+          order: Option<String>,
+        }
+        let input: SortInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let mut data = input.data;
+        match &input.field {
+          Some(field_str) => {
+            let f = field_str.as_str();
+            crate::algorithms::bubble_sort_by(&mut data, |a, b| {
+              let va = extract_field_value(a, f);
+              let vb = extract_field_value(b, f);
+              json_ord(&va, &vb)
+            });
+          }
+          None => {
+            crate::algorithms::bubble_sort_by(&mut data, |a, b| json_ord(a, b));
+          }
+        }
         Ok(serde_json::to_value(data).map_err(|e| e.to_string())?)
       }),
     );
 
-    self.register(
+    self.register_fn(
       "sort.insertion".to_string(),
       Box::new(|input| {
-        let mut data: Vec<serde_json::Value> =
-          serde_json::from_value(input).map_err(|e| e.to_string())?;
-        json_insertion_sort(&mut data);
+        #[derive(serde::Deserialize)]
+        struct SortInput {
+          data: Vec<serde_json::Value>,
+          #[serde(default)]
+          field: Option<String>,
+          #[serde(default)]
+          order: Option<String>,
+        }
+        let input: SortInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let mut data = input.data;
+        match &input.field {
+          Some(field_str) => {
+            let f = field_str.as_str();
+            crate::algorithms::insertion_sort_by(&mut data, |a, b| {
+              let va = extract_field_value(a, f);
+              let vb = extract_field_value(b, f);
+              json_ord(&va, &vb)
+            });
+          }
+          None => {
+            crate::algorithms::insertion_sort_by(&mut data, |a, b| json_ord(a, b));
+          }
+        }
         Ok(serde_json::to_value(data).map_err(|e| e.to_string())?)
       }),
     );
 
-    self.register(
+    self.register_fn(
       "sort.merge".to_string(),
       Box::new(|input| {
-        let mut data: Vec<serde_json::Value> =
-          serde_json::from_value(input).map_err(|e| e.to_string())?;
-        json_merge_sort(&mut data);
+        #[derive(serde::Deserialize)]
+        struct SortInput {
+          data: Vec<serde_json::Value>,
+          #[serde(default)]
+          field: Option<String>,
+          #[serde(default)]
+          order: Option<String>,
+        }
+        let input: SortInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let mut data = input.data;
+        match &input.field {
+          Some(field_str) => {
+            let f = field_str.as_str();
+            crate::algorithms::merge_sort_by(&mut data, |a, b| {
+              let va = extract_field_value(a, f);
+              let vb = extract_field_value(b, f);
+              json_ord(&va, &vb)
+            });
+          }
+          None => {
+            crate::algorithms::merge_sort_by(&mut data, |a, b| json_ord(a, b));
+          }
+        }
         Ok(serde_json::to_value(data).map_err(|e| e.to_string())?)
       }),
     );
 
-    self.register(
+    self.register_fn(
       "sort.quick".to_string(),
       Box::new(|input| {
-        let mut data: Vec<serde_json::Value> =
-          serde_json::from_value(input).map_err(|e| e.to_string())?;
-        json_quick_sort(&mut data);
+        #[derive(serde::Deserialize)]
+        struct SortInput {
+          data: Vec<serde_json::Value>,
+          #[serde(default)]
+          field: Option<String>,
+          #[serde(default)]
+          order: Option<String>,
+        }
+        let input: SortInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let mut data = input.data;
+        match &input.field {
+          Some(field_str) => {
+            let f = field_str.as_str();
+            crate::algorithms::quick_sort_by(&mut data, |a, b| {
+              let va = extract_field_value(a, f);
+              let vb = extract_field_value(b, f);
+              json_ord(&va, &vb)
+            });
+          }
+          None => {
+            crate::algorithms::quick_sort_by(&mut data, |a, b| json_ord(a, b));
+          }
+        }
         Ok(serde_json::to_value(data).map_err(|e| e.to_string())?)
       }),
     );
 
     // Search algorithms
-    self.register(
+    self.register_fn(
       "search.schemas".to_string(),
       Box::new(|input| {
         #[derive(serde::Deserialize)]
@@ -104,7 +227,7 @@ impl AlgorithmRegistry {
       }),
     );
 
-    self.register(
+    self.register_fn(
       "search.paginate".to_string(),
       Box::new(|input| {
         #[derive(serde::Deserialize)]
@@ -121,7 +244,7 @@ impl AlgorithmRegistry {
     );
 
     // Graph algorithms
-    self.register(
+    self.register_fn(
       "graph.dijkstra".to_string(),
       Box::new(|input| {
         #[derive(serde::Deserialize)]
@@ -145,7 +268,7 @@ impl AlgorithmRegistry {
     );
 
     // BFS — breadth-first search returning visited node ids in order
-    self.register(
+    self.register_fn(
       "graph.bfs".to_string(),
       Box::new(|input| {
         #[derive(serde::Deserialize)]
@@ -200,7 +323,7 @@ impl AlgorithmRegistry {
     );
 
     // DFS — depth-first search returning visited node ids in order
-    self.register(
+    self.register_fn(
       "graph.dfs".to_string(),
       Box::new(|input| {
         #[derive(serde::Deserialize)]
@@ -254,7 +377,7 @@ impl AlgorithmRegistry {
     );
 
     // Topological sort — Kahn's algorithm, returns nodes in dependency order
-    self.register(
+    self.register_fn(
       "graph.topological_sort".to_string(),
       Box::new(|input| {
         #[derive(serde::Deserialize)]
@@ -311,7 +434,7 @@ impl AlgorithmRegistry {
     );
 
     // Tree algorithms
-    self.register(
+    self.register_fn(
       "tree.build".to_string(),
       Box::new(|input| {
         #[derive(serde::Deserialize)]
@@ -381,7 +504,7 @@ impl AlgorithmRegistry {
       }),
     );
 
-    self.register(
+    self.register_fn(
       "tree.flatten".to_string(),
       Box::new(|input| {
         #[derive(serde::Deserialize)]
@@ -414,16 +537,25 @@ impl AlgorithmRegistry {
     );
 
     // Validation algorithms
-    self.register(
+    self.register_fn(
       "validate.email".to_string(),
       Box::new(|input| {
-        let email: String = serde_json::from_value(input).map_err(|e| e.to_string())?;
-        let result = ValidationAlgorithm::validate_email(&email);
-        Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
+        #[derive(serde::Deserialize)]
+        struct EmailInput {
+          email: String,
+        }
+        let input: EmailInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let valid = ValidationAlgorithm::validate_email(&input.email);
+        let result = if valid {
+          serde_json::json!({ "valid": true })
+        } else {
+          serde_json::json!({ "valid": false, "errors": ["Invalid email format"] })
+        };
+        Ok(result)
       }),
     );
 
-    self.register(
+    self.register_fn(
       "validate.input".to_string(),
       Box::new(|input| {
         #[derive(serde::Deserialize)]
@@ -432,16 +564,25 @@ impl AlgorithmRegistry {
           max_length: usize,
         }
         let input: ValidateInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
-        let result = ValidationAlgorithm::validate_input(&input.input, input.max_length);
-        Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
+        let valid = ValidationAlgorithm::validate_input(&input.input, input.max_length);
+        let result = if valid {
+          serde_json::json!({ "valid": true })
+        } else {
+          serde_json::json!({ "valid": false, "errors": ["Input invalid or empty"] })
+        };
+        Ok(result)
       }),
     );
 
-    self.register(
+    self.register_fn(
       "validate.sanitize".to_string(),
       Box::new(|input| {
-        let input_str: String = serde_json::from_value(input).map_err(|e| e.to_string())?;
-        let result = ValidationAlgorithm::sanitize_input(&input_str);
+        #[derive(serde::Deserialize)]
+        struct SanitizeInput {
+          input: String,
+        }
+        let input: SanitizeInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let result = ValidationAlgorithm::sanitize_input(&input.input);
         Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
       }),
     );
@@ -525,6 +666,15 @@ fn json_merge_sort(data: &mut [serde_json::Value]) {
   json_merge_sort(&mut left);
   json_merge_sort(&mut right);
   json_merge(data, &left, &right);
+}
+
+// Extract field value from JSON object, returns self if not an object or field absent
+fn extract_field_value(v: &serde_json::Value, field: &str) -> serde_json::Value {
+  if let serde_json::Value::Object(obj) = v {
+    obj.get(field).cloned().unwrap_or_else(|| v.clone())
+  } else {
+    v.clone()
+  }
 }
 
 fn json_merge(
