@@ -1,3 +1,5 @@
+use crate::log_error;
+use crate::log_info;
 use crate::rbac::models::{Session, User};
 use nosql_orm::prelude::*;
 use nosql_orm::providers::JsonProvider;
@@ -7,6 +9,9 @@ pub async fn login(
   username: String,
   password: String,
 ) -> Result<Session, String> {
+  log_info!("[BACKEND] AUTH:login START username={}", username);
+  let start = std::time::Instant::now();
+
   let users = db.find_all("users").await.map_err(|e| e.to_string())?;
   let user_data = users
     .into_iter()
@@ -14,10 +19,20 @@ pub async fn login(
 
   let user: User = match user_data {
     Some(data) => serde_json::from_value(data).map_err(|e| e.to_string())?,
-    None => return Err("User not found".to_string()),
+    None => {
+      log_error!(
+        "[BACKEND] AUTH:login ERROR ({:?}): User not found",
+        start.elapsed()
+      );
+      return Err("User not found".to_string());
+    }
   };
 
   if !bcrypt::verify(&password, &user.password_hash).map_err(|e| e.to_string())? {
+    log_error!(
+      "[BACKEND] AUTH:login ERROR ({:?}): Invalid password",
+      start.elapsed()
+    );
     return Err("Invalid password".to_string());
   }
 
@@ -27,13 +42,26 @@ pub async fn login(
     .await
     .map_err(|e| e.to_string())?;
 
+  log_info!(
+    "[BACKEND] AUTH:login OK ({:?}) session_token={}",
+    start.elapsed(),
+    session.token
+  );
   Ok(session)
 }
 
 pub async fn logout(db: &JsonProvider, session_token: String) -> Result<(), String> {
+  log_info!(
+    "[BACKEND] AUTH:logout START session_token={}",
+    session_token
+  );
+  let start = std::time::Instant::now();
+
   db.delete("sessions", &session_token)
     .await
     .map_err(|e| e.to_string())?;
+
+  log_info!("[BACKEND] AUTH:logout OK ({:?})", start.elapsed());
   Ok(())
 }
 
@@ -43,11 +71,18 @@ pub async fn register(
   password: String,
   email: String,
 ) -> Result<User, String> {
+  log_info!("[BACKEND] AUTH:register START username={}", username);
+  let start = std::time::Instant::now();
+
   let users = db.find_all("users").await.map_err(|e| e.to_string())?;
   if users
     .iter()
     .any(|u| u.get("username").and_then(|v| v.as_str()) == Some(&username))
   {
+    log_error!(
+      "[BACKEND] AUTH:register ERROR ({:?}): Username already exists",
+      start.elapsed()
+    );
     return Err("Username already exists".to_string());
   }
 
@@ -58,10 +93,21 @@ pub async fn register(
     .await
     .map_err(|e| e.to_string())?;
 
+  log_info!(
+    "[BACKEND] AUTH:register OK ({:?}) user_id={}",
+    start.elapsed(),
+    user.id
+  );
   Ok(user)
 }
 
 pub async fn get_current_user(db: &JsonProvider, session_token: String) -> Result<User, String> {
+  log_info!(
+    "[BACKEND] AUTH:get_current_user START session_token={}",
+    session_token
+  );
+  let start = std::time::Instant::now();
+
   let sessions = db.find_all("sessions").await.map_err(|e| e.to_string())?;
   let session_data = sessions
     .into_iter()
@@ -69,7 +115,13 @@ pub async fn get_current_user(db: &JsonProvider, session_token: String) -> Resul
 
   let session: Session = match session_data {
     Some(data) => serde_json::from_value(data).map_err(|e| e.to_string())?,
-    None => return Err("Invalid session".to_string()),
+    None => {
+      log_error!(
+        "[BACKEND] AUTH:get_current_user ERROR ({:?}): Invalid session",
+        start.elapsed()
+      );
+      return Err("Invalid session".to_string());
+    }
   };
 
   let users = db.find_all("users").await.map_err(|e| e.to_string())?;
@@ -78,8 +130,22 @@ pub async fn get_current_user(db: &JsonProvider, session_token: String) -> Resul
     .find(|u| u.get("id").and_then(|v| v.as_str()) == Some(&session.user_id));
 
   match user_data {
-    Some(data) => serde_json::from_value(data).map_err(|e| e.to_string()),
-    None => Err("User not found".to_string()),
+    Some(data) => {
+      let user: User = serde_json::from_value(data).map_err(|e| e.to_string())?;
+      log_info!(
+        "[BACKEND] AUTH:get_current_user OK ({:?}) user_id={}",
+        start.elapsed(),
+        user.id
+      );
+      Ok(user)
+    }
+    None => {
+      log_error!(
+        "[BACKEND] AUTH:get_current_user ERROR ({:?}): User not found",
+        start.elapsed()
+      );
+      Err("User not found".to_string())
+    }
   }
 }
 

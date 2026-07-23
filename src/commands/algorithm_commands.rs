@@ -1,4 +1,6 @@
 use crate::algorithms::AlgorithmRegistry;
+use crate::log_error;
+use crate::log_info;
 use crate::response::Response;
 
 #[tauri::command]
@@ -7,15 +9,32 @@ pub fn execute_algorithm(
   input: serde_json::Value,
   registry: tauri::State<'_, AlgorithmRegistry>,
 ) -> Response<serde_json::Value> {
-  match registry.execute(&name, input) {
-    Ok(data) => Response::success(data, None),
-    Err(err) => Response::error(err),
-  }
+  log_info!("[BACKEND] CMD:execute_algorithm START name={}", name);
+  let start = std::time::Instant::now();
+  let result = match registry.execute(&name, input) {
+    Ok(data) => {
+      log_info!("[BACKEND] CMD:execute_algorithm OK ({:?})", start.elapsed());
+      Response::success(data, None)
+    }
+    Err(err) => {
+      log_error!(
+        "[BACKEND] CMD:execute_algorithm ERROR ({:?}): {}",
+        start.elapsed(),
+        err
+      );
+      Response::error(err)
+    }
+  };
+  result
 }
 
 #[tauri::command]
 pub fn list_algorithms(registry: tauri::State<'_, AlgorithmRegistry>) -> Response<Vec<String>> {
-  Response::success(registry.list(), None)
+  log_info!("[BACKEND] CMD:list_algorithms START");
+  let result = Response::success(registry.list(), None);
+  let count = result.data.as_ref().map(|v| v.len()).unwrap_or(0);
+  log_info!("[BACKEND] CMD:list_algorithms OK count={}", count);
+  result
 }
 
 #[cfg(test)]
@@ -32,7 +51,10 @@ mod tests {
   #[test]
   fn test_execute_bubble_sort_via_registry_directly() {
     let registry = AlgorithmRegistry::new();
-    let result = registry.execute("sort.bubble", serde_json::json!([5, 3, 8, 1, 9]));
+    let result = registry.execute(
+      "sort.bubble",
+      serde_json::json!({ "data": [5, 3, 8, 1, 9] }),
+    );
     assert!(result.is_ok());
     let data = result.unwrap();
     let arr = data.as_array().unwrap();
