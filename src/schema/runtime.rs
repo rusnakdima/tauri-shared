@@ -126,7 +126,7 @@ impl From<&CanvasElement> for RenderedElement {
 #[ts(export)]
 pub struct ValidationResult {
   pub valid: bool,
-  pub errors: Vec<ValidationError>,
+  pub errors: Vec<SchemaValidationError>,
 }
 
 impl ValidationResult {
@@ -137,7 +137,7 @@ impl ValidationResult {
     }
   }
 
-  pub fn invalid(errors: Vec<ValidationError>) -> Self {
+  pub fn invalid(errors: Vec<SchemaValidationError>) -> Self {
     Self {
       valid: false,
       errors,
@@ -148,13 +148,13 @@ impl ValidationResult {
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
-pub struct ValidationError {
+pub struct SchemaValidationError {
   pub path: String,
   pub message: String,
   pub severity: String,
 }
 
-impl ValidationError {
+impl SchemaValidationError {
   pub fn new(path: &str, message: &str, severity: &str) -> Self {
     Self {
       path: path.to_string(),
