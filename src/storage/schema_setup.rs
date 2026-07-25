@@ -2,14 +2,16 @@
 //!
 //! Apps call `setup_schema_system()` with just config values.
 //! Library handles: JsonProvider creation, SchemaSyncService, MongoDB sync,
-//! central /schemas/ directory dev fallback, state management.
+//! state management.
 //!
 //! # Architecture
 //!
-//! The schema system always reads from JsonProvider at the app's local data dir.
+//! The schema system reads from {data_dir}/schemas.json via JsonProvider.
+//! A symlink at {data_dir}/schemas.json → /home/dmitriy/Projects/schemas/{app_id}schemas.json
+//! is created MANUALLY by the user (not by this library).
+//!
 //! - PROD: MongoDB sync writes into JsonProvider → flushed to {data_dir}/schemas.json
-//! - DEV:  /schemas/{app_id}schemas.json is copied to {data_dir}/schemas.json
-//!         as a JsonProvider-compatible array before JsonProvider reads it.
+//! - DEV:  {data_dir}/schemas.json is a symlink to the canonical schema file
 
 use crate::log_info;
 use crate::storage::json_provider::JsonProviderState;
@@ -64,86 +66,14 @@ impl SchemaSyncState {
   }
 }
 
-/// Write a schema JSON file as a JsonProvider-compatible array.
-/// Reads a single object from `source` and writes it as `[{...}]` to `dest`.
-fn write_schema_as_json_provider_array(source: &std::path::Path, dest: &std::path::Path) -> bool {
-  let content = match std::fs::read_to_string(source) {
-    Ok(c) => c,
-    Err(e) => {
-      log_info!("Failed to read central schema file: {}", e);
-      return false;
-    }
-  };
-
-  let value: serde_json::Value = match serde_json::from_str(&content) {
-    Ok(v) => v,
-    Err(e) => {
-      log_info!("Failed to parse central schema file: {}", e);
-      return false;
-    }
-  };
-
-  let array = match value {
-    serde_json::Value::Array(arr) => arr,
-    serde_json::Value::Object(_) => vec![value],
-    _ => {
-      log_info!("Central schema file has unexpected format");
-      return false;
-    }
-  };
-
-  if let Some(parent) = dest.parent() {
-    let _ = std::fs::create_dir_all(parent);
-  }
-
-  match serde_json::to_string_pretty(&array) {
-    Ok(json) => match std::fs::write(dest, &json) {
-      Ok(_) => {
-        log_info!(
-          "Schema written to {:?} as JsonProvider array ({} documents)",
-          dest,
-          array.len()
-        );
-        true
-      }
-      Err(e) => {
-        log_info!("Failed to write schema to {:?}: {}", dest, e);
-        false
-      }
-    },
-    Err(e) => {
-      log_info!("Failed to serialize schema array: {}", e);
-      false
-    }
-  }
-}
-
-/// Copy the central dev schema to the app data dir in JsonProvider array format.
-/// This creates the file-level "link" so JsonProvider reads it naturally from disk.
-fn link_dev_schema_to_data_dir(app_id: &str, data_dir: &std::path::Path) {
-  let schemas_dir =
-    std::env::var("SCHEMAS_DIR").unwrap_or_else(|_| "/home/dmitriy/Projects/schemas/".to_string());
-  let source = std::path::Path::new(&schemas_dir).join(format!("{}schemas.json", app_id));
-
-  if !source.exists() {
-    log_info!("Dev schema not found at {:?} — no file linked", source);
-    return;
-  }
-
-  let dest = data_dir.join("schemas.json");
-  log_info!("Linking dev schema: {:?} → {:?}", source, dest);
-
-  write_schema_as_json_provider_array(&source, &dest);
-}
-
 /// Setup the entire schema system with a single call.
 ///
 /// This function:
 /// 1. Creates JsonProvider (local JSON database at {data_dir}/)
 /// 2. Creates SchemaSyncService (MongoDB → local sync)
 /// 3. Tries MongoDB sync — if success, writes into JsonProvider → flushed to file
-/// 4. If MongoDB fails, copies central /schemas/ file to {data_dir}/schemas.json
-///    so JsonProvider reads it from disk (dev mode "linking")
+/// 4. If MongoDB fails, the app reads from {data_dir}/schemas.json (which is a
+///    symlink to /home/dmitriy/Projects/schemas/{app_id}schemas.json — created manually)
 /// 5. Returns managed state for Tauri
 ///
 /// Always reads from local app data dir via JsonProvider.
@@ -208,11 +138,15 @@ pub async fn setup_schema_system(
     }
   }
 
-  // 4. Dev fallback: copy central schema file to {data_dir}/schemas.json
-  //    This creates the file-level "link" so JsonProvider reads it from disk
+  // 4. If MongoDB sync failed, the app reads from {data_dir}/schemas.json directly.
+  //    The user must have created a symlink: {data_dir}/schemas.json →
+  //    /home/dmitriy/Projects/schemas/{app_id}schemas.json
   if !schema_loaded {
-    log_info!("Dev mode: linking schema from /schemas/ to app data dir");
-    link_dev_schema_to_data_dir(&config.app_id, &config.data_dir);
+    log_info!(
+      "Schema '{}' not loaded from MongoDB — ensure {}/schemas.json is a symlink to the canonical schema",
+      config.app_id,
+      config.data_dir.display()
+    );
   }
 
   log_info!("Schema system setup complete for app '{}'", config.app_id);

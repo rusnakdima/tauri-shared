@@ -19,9 +19,9 @@ pub use algorithms::{
   GraphEdge, GraphNode, SearchAlgorithm, TextSearch, Validate, ValidationAlgorithm,
 };
 pub use commands::{
-  check_for_update_command, delete_schema, download_update_command, execute_algorithm,
-  get_all_schemas, get_current_version, get_schema, get_schema_direct, get_ui_schema,
-  install_update_command, list_algorithms, save_schema, save_ui_schema,
+  algo_execute, check_for_update_command, crud_execute, delete_schema, download_update_command,
+  execute_algorithm, get_all_schemas, get_current_version, get_schema, get_schema_direct,
+  get_ui_schema, install_update_command, list_algorithms, save_schema, save_ui_schema,
 };
 pub use crud::service::CrudService;
 pub use env::{init_env, EnvConfig, ENV};

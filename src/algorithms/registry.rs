@@ -586,6 +586,20 @@ impl AlgorithmRegistry {
         Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
       }),
     );
+
+    // Sanitization algorithms
+    self.register_fn(
+      "sanitize.escape_html".to_string(),
+      Box::new(|input| {
+        #[derive(serde::Deserialize)]
+        struct EscapeHtmlInput {
+          data: String,
+        }
+        let input: EscapeHtmlInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
+        let result = crate::algorithms::sanitization::escape_html(&input.data);
+        Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
+      }),
+    );
   }
 }
 
