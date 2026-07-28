@@ -3,7 +3,9 @@ use std::sync::{Arc, RwLock};
 
 use crate::algorithms::{
   graph::{Graph, GraphEdge, GraphNode},
-  SearchAlgorithm, ValidationAlgorithm,
+  search::SearchAlgorithm,
+  sorting::{bubble_sort_by, insertion_sort_by, merge_sort_by},
+  ValidationAlgorithm,
 };
 
 pub type AlgorithmFn =
@@ -34,7 +36,10 @@ impl AlgorithmRegistry {
 
   /// Register a function-based algorithm by name.
   pub fn register_fn(&self, name: String, func: AlgorithmFn) {
-    let mut algorithms = self.algorithms.write().unwrap();
+    let mut algorithms = self
+      .algorithms
+      .write()
+      .expect("Algorithm registry write lock poisoned");
     algorithms.insert(name, func);
   }
 
@@ -42,12 +47,18 @@ impl AlgorithmRegistry {
   pub fn register(&self, algo: Box<dyn Algorithm>) {
     let name = algo.name().to_string();
     let func: AlgorithmFn = Box::new(move |input| algo.execute(input));
-    let mut algorithms = self.algorithms.write().unwrap();
+    let mut algorithms = self
+      .algorithms
+      .write()
+      .expect("Algorithm registry write lock poisoned");
     algorithms.insert(name, func);
   }
 
   pub fn execute(&self, name: &str, input: serde_json::Value) -> Result<serde_json::Value, String> {
-    let algorithms = self.algorithms.read().unwrap();
+    let algorithms = self
+      .algorithms
+      .read()
+      .expect("Algorithm registry read lock poisoned");
     let func = algorithms
       .get(name)
       .ok_or_else(|| format!("Algorithm not found: {name}"))?;
@@ -55,7 +66,10 @@ impl AlgorithmRegistry {
   }
 
   pub fn list(&self) -> Vec<String> {
-    let algorithms = self.algorithms.read().unwrap();
+    let algorithms = self
+      .algorithms
+      .read()
+      .expect("Algorithm registry read lock poisoned");
     algorithms.keys().cloned().collect()
   }
 
@@ -64,7 +78,10 @@ impl AlgorithmRegistry {
     name: String,
     handler: Box<dyn Fn(serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync>,
   ) {
-    let mut algorithms = self.algorithms.write().unwrap();
+    let mut algorithms = self
+      .algorithms
+      .write()
+      .expect("Algorithm registry write lock poisoned");
     algorithms.insert(name, handler);
   }
 
@@ -77,13 +94,25 @@ impl AlgorithmRegistry {
       ),
     >,
   ) {
-    let mut inner = self.algorithms.write().unwrap();
+    let mut inner = self
+      .algorithms
+      .write()
+      .expect("Algorithm registry write lock poisoned");
     for (name, handler) in algorithms {
       inner.insert(name, handler);
     }
   }
 
   fn register_builtins(&self) {
+    self.register_sorting_algorithms();
+    self.register_search_algorithms();
+    self.register_graph_algorithms();
+    self.register_tree_algorithms();
+    self.register_validation_algorithms();
+    self.register_sanitization_algorithms();
+  }
+
+  fn register_sorting_algorithms(&self) {
     // Sorting algorithms — accept structured input { data: T[], field?: string, order?: 'asc' | 'desc' }
     // AlgorithmService sends { data: items, field, order } format
     self.register_fn(
@@ -94,22 +123,20 @@ impl AlgorithmRegistry {
           data: Vec<serde_json::Value>,
           #[serde(default)]
           field: Option<String>,
-          #[serde(default)]
-          order: Option<String>,
         }
         let input: SortInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
         let mut data = input.data;
         match &input.field {
           Some(field_str) => {
             let f = field_str.as_str();
-            crate::algorithms::bubble_sort_by(&mut data, |a, b| {
+            bubble_sort_by(&mut data, |a, b| {
               let va = extract_field_value(a, f);
               let vb = extract_field_value(b, f);
               json_ord(&va, &vb)
             });
           }
           None => {
-            crate::algorithms::bubble_sort_by(&mut data, |a, b| json_ord(a, b));
+            bubble_sort_by(&mut data, |a, b| json_ord(a, b));
           }
         }
         Ok(serde_json::to_value(data).map_err(|e| e.to_string())?)
@@ -124,22 +151,20 @@ impl AlgorithmRegistry {
           data: Vec<serde_json::Value>,
           #[serde(default)]
           field: Option<String>,
-          #[serde(default)]
-          order: Option<String>,
         }
         let input: SortInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
         let mut data = input.data;
         match &input.field {
           Some(field_str) => {
             let f = field_str.as_str();
-            crate::algorithms::insertion_sort_by(&mut data, |a, b| {
+            insertion_sort_by(&mut data, |a, b| {
               let va = extract_field_value(a, f);
               let vb = extract_field_value(b, f);
               json_ord(&va, &vb)
             });
           }
           None => {
-            crate::algorithms::insertion_sort_by(&mut data, |a, b| json_ord(a, b));
+            insertion_sort_by(&mut data, |a, b| json_ord(a, b));
           }
         }
         Ok(serde_json::to_value(data).map_err(|e| e.to_string())?)
@@ -154,22 +179,20 @@ impl AlgorithmRegistry {
           data: Vec<serde_json::Value>,
           #[serde(default)]
           field: Option<String>,
-          #[serde(default)]
-          order: Option<String>,
         }
         let input: SortInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
         let mut data = input.data;
         match &input.field {
           Some(field_str) => {
             let f = field_str.as_str();
-            crate::algorithms::merge_sort_by(&mut data, |a, b| {
+            merge_sort_by(&mut data, |a, b| {
               let va = extract_field_value(a, f);
               let vb = extract_field_value(b, f);
               json_ord(&va, &vb)
             });
           }
           None => {
-            crate::algorithms::merge_sort_by(&mut data, |a, b| json_ord(a, b));
+            merge_sort_by(&mut data, |a, b| json_ord(a, b));
           }
         }
         Ok(serde_json::to_value(data).map_err(|e| e.to_string())?)
@@ -184,8 +207,6 @@ impl AlgorithmRegistry {
           data: Vec<serde_json::Value>,
           #[serde(default)]
           field: Option<String>,
-          #[serde(default)]
-          order: Option<String>,
         }
         let input: SortInput = serde_json::from_value(input).map_err(|e| e.to_string())?;
         let mut data = input.data;
@@ -205,8 +226,9 @@ impl AlgorithmRegistry {
         Ok(serde_json::to_value(data).map_err(|e| e.to_string())?)
       }),
     );
+  }
 
-    // Search algorithms
+  fn register_search_algorithms(&self) {
     self.register_fn(
       "search.schemas".to_string(),
       Box::new(|input| {
@@ -242,8 +264,9 @@ impl AlgorithmRegistry {
         Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
       }),
     );
+  }
 
-    // Graph algorithms
+  fn register_graph_algorithms(&self) {
     self.register_fn(
       "graph.dijkstra".to_string(),
       Box::new(|input| {
@@ -432,8 +455,9 @@ impl AlgorithmRegistry {
         Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
       }),
     );
+  }
 
-    // Tree algorithms
+  fn register_tree_algorithms(&self) {
     self.register_fn(
       "tree.build".to_string(),
       Box::new(|input| {
@@ -493,7 +517,9 @@ impl AlgorithmRegistry {
                   obj.insert("children".to_string(), serde_json::json!(children));
                   let mut slice = (*children).to_vec();
                   attach_children(&mut slice, children_map);
-                  *obj.get_mut("children").unwrap() = serde_json::json!(slice);
+                  *obj
+                    .get_mut("children")
+                    .expect("children key must exist in tree node") = serde_json::json!(slice);
                 }
               }
             }
@@ -535,8 +561,9 @@ impl AlgorithmRegistry {
         Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
       }),
     );
+  }
 
-    // Validation algorithms
+  fn register_validation_algorithms(&self) {
     self.register_fn(
       "validate.email".to_string(),
       Box::new(|input| {
@@ -586,8 +613,9 @@ impl AlgorithmRegistry {
         Ok(serde_json::to_value(result).map_err(|e| e.to_string())?)
       }),
     );
+  }
 
-    // Sanitization algorithms
+  fn register_sanitization_algorithms(&self) {
     self.register_fn(
       "sanitize.escape_html".to_string(),
       Box::new(|input| {
@@ -646,42 +674,6 @@ fn json_ord(a: &serde_json::Value, b: &serde_json::Value) -> std::cmp::Ordering 
   }
 }
 
-// JSON-aware bubble sort
-fn json_bubble_sort(data: &mut [serde_json::Value]) {
-  let n = data.len();
-  for i in 0..n {
-    for j in 0..n - i - 1 {
-      if json_ord(&data[j], &data[j + 1]) == std::cmp::Ordering::Greater {
-        data.swap(j, j + 1);
-      }
-    }
-  }
-}
-
-// JSON-aware insertion sort
-fn json_insertion_sort(data: &mut [serde_json::Value]) {
-  for i in 1..data.len() {
-    let mut j = i;
-    while j > 0 && json_ord(&data[j - 1], &data[j]) == std::cmp::Ordering::Greater {
-      data.swap(j - 1, j);
-      j -= 1;
-    }
-  }
-}
-
-// JSON-aware merge sort
-fn json_merge_sort(data: &mut [serde_json::Value]) {
-  if data.len() <= 1 {
-    return;
-  }
-  let mid = data.len() / 2;
-  let mut left = data[..mid].to_vec();
-  let mut right = data[mid..].to_vec();
-  json_merge_sort(&mut left);
-  json_merge_sort(&mut right);
-  json_merge(data, &left, &right);
-}
-
 // Extract field value from JSON object, returns self if not an object or field absent
 fn extract_field_value(v: &serde_json::Value, field: &str) -> serde_json::Value {
   if let serde_json::Value::Object(obj) = v {
@@ -689,67 +681,4 @@ fn extract_field_value(v: &serde_json::Value, field: &str) -> serde_json::Value 
   } else {
     v.clone()
   }
-}
-
-fn json_merge(
-  result: &mut [serde_json::Value],
-  left: &[serde_json::Value],
-  right: &[serde_json::Value],
-) {
-  let mut i = 0;
-  let mut j = 0;
-  let mut k = 0;
-  while i < left.len() && j < right.len() {
-    if json_ord(&left[i], &right[j]) != std::cmp::Ordering::Greater {
-      result[k] = left[i].clone();
-      i += 1;
-    } else {
-      result[k] = right[j].clone();
-      j += 1;
-    }
-    k += 1;
-  }
-  while i < left.len() {
-    result[k] = left[i].clone();
-    i += 1;
-    k += 1;
-  }
-  while j < right.len() {
-    result[k] = right[j].clone();
-    j += 1;
-    k += 1;
-  }
-}
-
-// JSON-aware quick sort
-fn json_quick_sort(data: &mut [serde_json::Value]) {
-  if data.is_empty() {
-    return;
-  }
-  json_quick_sort_impl(data, 0, data.len() - 1);
-}
-
-fn json_quick_sort_impl(data: &mut [serde_json::Value], low: usize, high: usize) {
-  if low < high {
-    let pivot_idx = json_partition(data, low, high);
-    if pivot_idx > 0 {
-      json_quick_sort_impl(data, low, pivot_idx - 1);
-    }
-    if pivot_idx < high {
-      json_quick_sort_impl(data, pivot_idx + 1, high);
-    }
-  }
-}
-
-fn json_partition(data: &mut [serde_json::Value], low: usize, high: usize) -> usize {
-  let pivot = data[high].clone();
-  let mut i = low;
-  for j in low..high {
-    if json_ord(&data[j], &pivot) != std::cmp::Ordering::Greater {
-      data.swap(i, j);
-      i += 1;
-    }
-  }
-  data.swap(i, high);
-  i
 }

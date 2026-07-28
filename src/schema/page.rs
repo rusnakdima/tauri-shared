@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use ts_rs::TS;
 
+use super::data_binding::DataBinding;
+use super::element_layout::ElementLayout;
+use super::handlers::{ActionDef, DataSourceDef};
+
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -18,6 +22,14 @@ pub struct Page {
   pub sections: HashMap<String, PageSection>,
   #[serde(default)]
   pub canvas_elements: Vec<CanvasElement>,
+  #[serde(default)]
+  pub layout_mode: Option<String>,
+  #[serde(default)]
+  #[ts(skip)]
+  pub data_sources: Option<Vec<DataSourceDef>>,
+  #[serde(default)]
+  #[ts(skip)]
+  pub actions: Option<Vec<ActionDef>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
@@ -30,6 +42,8 @@ pub struct PageMeta {
   pub icon: Option<String>,
   #[serde(default)]
   pub breadcrumb: Vec<String>,
+  #[serde(default)]
+  pub description: Option<String>,
 }
 
 impl Default for PageMeta {
@@ -38,6 +52,7 @@ impl Default for PageMeta {
       title: None,
       icon: None,
       breadcrumb: Vec::new(),
+      description: None,
     }
   }
 }
@@ -75,6 +90,12 @@ pub struct CanvasElement {
   pub children: Vec<String>,
   #[serde(default)]
   pub data_binding: Option<DataBinding>,
+  #[serde(default)]
+  pub type_field: Option<String>,
+  #[serde(default)]
+  pub visible: Option<bool>,
+  #[serde(default)]
+  pub layout: Option<ElementLayout>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
@@ -122,13 +143,4 @@ fn default_col_span() -> i32 {
 
 fn default_row_span() -> i32 {
   1
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, JsonSchema, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct DataBinding {
-  pub entity: String,
-  #[serde(default)]
-  pub field: Option<String>,
 }

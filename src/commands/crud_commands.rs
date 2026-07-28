@@ -3,7 +3,6 @@ use crate::response::Response;
 use nosql_orm::prelude::*;
 use serde::Deserialize;
 use serde_json::Value;
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CrudRequest {
@@ -23,7 +22,7 @@ pub async fn crud_execute(
   request: CrudRequest,
   db: tauri::State<'_, JsonProvider>,
 ) -> Result<Response<Value>, String> {
-  let service = CrudService::new((*db).clone());
+  let service = CrudService::new(&*db);
   service
     .execute(
       &request.operation,
@@ -54,7 +53,7 @@ mod tests {
     let provider = JsonProvider::new(temp_dir.path().to_str().unwrap())
       .await
       .unwrap();
-    CrudService::new(provider)
+    CrudService::new(Arc::new(provider))
   }
 
   #[tokio::test]

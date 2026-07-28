@@ -159,20 +159,6 @@ pub enum AppError {
   PermissionDenied(String),
   InvalidPath(String),
   RequestFailed(String),
-  PlayerNotFound(String),
-  GhostNotFound(String),
-  SessionNotFound(String),
-  InvalidPhase(String),
-  BackupFailed(String),
-  ProcessNotFound(String),
-  ServiceNotFound(String),
-  PathOutsideAllowed(String),
-  Config(String),
-  Voice(String),
-  Settings(String),
-  VLM(String),
-  Music(String),
-  Cache(String),
   Lock(String),
 }
 
@@ -191,20 +177,6 @@ impl std::fmt::Display for AppError {
       AppError::PermissionDenied(msg) => write!(f, "Permission denied: {}", msg),
       AppError::InvalidPath(msg) => write!(f, "Invalid path: {}", msg),
       AppError::RequestFailed(msg) => write!(f, "Request failed: {}", msg),
-      AppError::PlayerNotFound(msg) => write!(f, "Player not found: {}", msg),
-      AppError::GhostNotFound(msg) => write!(f, "Ghost not found: {}", msg),
-      AppError::SessionNotFound(msg) => write!(f, "Session not found: {}", msg),
-      AppError::InvalidPhase(msg) => write!(f, "Invalid phase: {}", msg),
-      AppError::BackupFailed(msg) => write!(f, "Backup failed: {}", msg),
-      AppError::ProcessNotFound(msg) => write!(f, "Process not found: {}", msg),
-      AppError::ServiceNotFound(msg) => write!(f, "Service not found: {}", msg),
-      AppError::PathOutsideAllowed(msg) => write!(f, "Path outside allowed: {}", msg),
-      AppError::Config(msg) => write!(f, "Config error: {}", msg),
-      AppError::Voice(msg) => write!(f, "Voice error: {}", msg),
-      AppError::Settings(msg) => write!(f, "Settings error: {}", msg),
-      AppError::VLM(msg) => write!(f, "VLM error: {}", msg),
-      AppError::Music(msg) => write!(f, "Music error: {}", msg),
-      AppError::Cache(msg) => write!(f, "Cache error: {}", msg),
       AppError::Lock(msg) => write!(f, "Lock error: {}", msg),
     }
   }
@@ -307,76 +279,6 @@ impl AppError {
       AppError::RequestFailed(msg) => Response {
         status: Status::Error,
         message: msg,
-        data: None,
-      },
-      AppError::PlayerNotFound(msg) => Response {
-        status: Status::NotFound,
-        message: format!("Player not found: {}", msg),
-        data: None,
-      },
-      AppError::GhostNotFound(msg) => Response {
-        status: Status::NotFound,
-        message: format!("Ghost not found: {}", msg),
-        data: None,
-      },
-      AppError::SessionNotFound(msg) => Response {
-        status: Status::NotFound,
-        message: format!("Session not found: {}", msg),
-        data: None,
-      },
-      AppError::InvalidPhase(msg) => Response {
-        status: Status::ValidationError,
-        message: format!("Invalid phase: {}", msg),
-        data: None,
-      },
-      AppError::BackupFailed(msg) => Response {
-        status: Status::Error,
-        message: format!("Backup failed: {}", msg),
-        data: None,
-      },
-      AppError::ProcessNotFound(msg) => Response {
-        status: Status::NotFound,
-        message: format!("Process not found: {}", msg),
-        data: None,
-      },
-      AppError::ServiceNotFound(msg) => Response {
-        status: Status::NotFound,
-        message: format!("Service not found: {}", msg),
-        data: None,
-      },
-      AppError::PathOutsideAllowed(msg) => Response {
-        status: Status::Forbidden,
-        message: format!("Path outside allowed: {}", msg),
-        data: None,
-      },
-      AppError::Config(msg) => Response {
-        status: Status::Error,
-        message: format!("Config error: {}", msg),
-        data: None,
-      },
-      AppError::Voice(msg) => Response {
-        status: Status::Error,
-        message: format!("Voice error: {}", msg),
-        data: None,
-      },
-      AppError::Settings(msg) => Response {
-        status: Status::Error,
-        message: format!("Settings error: {}", msg),
-        data: None,
-      },
-      AppError::VLM(msg) => Response {
-        status: Status::Error,
-        message: format!("VLM error: {}", msg),
-        data: None,
-      },
-      AppError::Music(msg) => Response {
-        status: Status::Error,
-        message: format!("Music error: {}", msg),
-        data: None,
-      },
-      AppError::Cache(msg) => Response {
-        status: Status::Error,
-        message: format!("Cache error: {}", msg),
         data: None,
       },
       AppError::Lock(msg) => Response {

@@ -1,17 +1,14 @@
 use crate::response::Response;
 use nosql_orm::prelude::*;
 use serde_json::Value;
-use std::sync::Arc;
 
-pub struct CrudService {
-  provider: Arc<JsonProvider>,
+pub struct CrudService<'a> {
+  provider: &'a JsonProvider,
 }
 
-impl CrudService {
-  pub fn new(provider: JsonProvider) -> Self {
-    Self {
-      provider: Arc::new(provider),
-    }
+impl<'a> CrudService<'a> {
+  pub fn new(provider: &'a JsonProvider) -> Self {
+    Self { provider }
   }
 
   pub async fn execute(
@@ -129,7 +126,7 @@ mod tests {
     let provider = JsonProvider::new(temp_dir.path().to_str().unwrap())
       .await
       .unwrap();
-    let crud = CrudService::new(provider);
+    let crud = CrudService::new(&provider);
     let result = crud.execute("get_all", "items", None, None, None).await;
     assert!(result.is_ok());
     let resp = result.unwrap();
@@ -147,7 +144,7 @@ mod tests {
     let provider = JsonProvider::new(temp_dir.path().to_str().unwrap())
       .await
       .unwrap();
-    let crud = CrudService::new(provider);
+    let crud = CrudService::new(&provider);
     let result = crud.execute("count", "items", None, None, None).await;
     assert!(result.is_ok());
   }
@@ -158,7 +155,7 @@ mod tests {
     let provider = JsonProvider::new(temp_dir.path().to_str().unwrap())
       .await
       .unwrap();
-    let crud = CrudService::new(provider);
+    let crud = CrudService::new(&provider);
     let result = crud.execute("invalid_op", "items", None, None, None).await;
     assert!(result.is_err());
   }

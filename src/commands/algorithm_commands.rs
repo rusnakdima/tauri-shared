@@ -34,31 +34,6 @@ pub async fn algo_execute(
 }
 
 #[tauri::command]
-pub fn execute_algorithm(
-  name: String,
-  input: serde_json::Value,
-  registry: tauri::State<'_, AlgorithmRegistry>,
-) -> Response<serde_json::Value> {
-  log_info!("[BACKEND] CMD:execute_algorithm START name={}", name);
-  let start = std::time::Instant::now();
-  let result = match registry.execute(&name, input) {
-    Ok(data) => {
-      log_info!("[BACKEND] CMD:execute_algorithm OK ({:?})", start.elapsed());
-      Response::success(data, None)
-    }
-    Err(err) => {
-      log_error!(
-        "[BACKEND] CMD:execute_algorithm ERROR ({:?}): {}",
-        start.elapsed(),
-        err
-      );
-      Response::error(err)
-    }
-  };
-  result
-}
-
-#[tauri::command]
 pub fn list_algorithms(registry: tauri::State<'_, AlgorithmRegistry>) -> Response<Vec<String>> {
   log_info!("[BACKEND] CMD:list_algorithms START");
   let result = Response::success(registry.list(), None);

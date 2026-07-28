@@ -2,14 +2,14 @@ use crate::log_info;
 use crate::logger::{LogEntry, LogLevel, Logger};
 use crate::response::Response;
 use crate::AppError;
-use crate::Result;
+use std::result::Result as StdResult;
 
 #[tauri::command]
 pub fn write_log_to_file(
   level: String,
   message: String,
   source: Option<String>,
-) -> Result<Response<()>> {
+) -> StdResult<Response<()>, AppError> {
   log_info!("[BACKEND] CMD:write_log_to_file START level={}", level);
   let log_level = match level.to_lowercase().as_str() {
     "debug" => LogLevel::Debug,
@@ -33,7 +33,7 @@ pub fn write_log_to_file(
 /// Set the global minimum log level dynamically
 /// Levels: "debug" | "info" | "warn" | "error"
 #[tauri::command]
-pub fn set_log_level(level: String) -> Result<Response<String>> {
+pub fn set_log_level(level: String) -> StdResult<Response<String>, AppError> {
   log_info!("[BACKEND] CMD:set_log_level START level={}", level);
   let log_level = LogLevel::from_str(&level).ok_or_else(|| {
     log_info!(
@@ -44,7 +44,7 @@ pub fn set_log_level(level: String) -> Result<Response<String>> {
   })?;
 
   Logger::set_level(log_level);
-  let current = Logger::get_level();
+  let current = Logger::get_level().map_err(|e| AppError::Lock(e))?;
   let level_str = current.as_str().to_string();
   log_info!("[BACKEND] CMD:set_log_level OK level={}", level_str);
 
@@ -56,9 +56,9 @@ pub fn set_log_level(level: String) -> Result<Response<String>> {
 
 /// Get the current global minimum log level
 #[tauri::command]
-pub fn get_log_level() -> Result<Response<String>> {
+pub fn get_log_level() -> StdResult<Response<String>, AppError> {
   log_info!("[BACKEND] CMD:get_log_level START");
-  let current = Logger::get_level();
+  let current = Logger::get_level().map_err(|e| AppError::Lock(e))?;
   log_info!("[BACKEND] CMD:get_log_level OK level={}", current.as_str());
   Ok(Response::success(
     current.as_str().to_string(),
@@ -68,18 +68,20 @@ pub fn get_log_level() -> Result<Response<String>> {
 
 /// Get all stored log entries (respects current minimum level)
 #[tauri::command]
-pub fn get_log_entries() -> Result<Response<Vec<LogEntry>>> {
+pub fn get_log_entries() -> StdResult<Response<Vec<LogEntry>>, AppError> {
   log_info!("[BACKEND] CMD:get_log_entries START");
-  let entries = Logger::global().get_entries();
+  let entries = Logger::global()
+    .get_entries()
+    .map_err(|e| AppError::Lock(e))?;
   log_info!("[BACKEND] CMD:get_log_entries OK count={}", entries.len());
   Ok(Response::success(entries, Some("Log entries retrieved")))
 }
 
 /// Clear all stored log entries
 #[tauri::command]
-pub fn clear_logs() -> Result<Response<()>> {
+pub fn clear_logs() -> StdResult<Response<()>, AppError> {
   log_info!("[BACKEND] CMD:clear_logs START");
-  Logger::global().clear();
+  Logger::global().clear().map_err(|e| AppError::Lock(e))?;
   log_info!("[BACKEND] CMD:clear_logs OK");
   Ok(Response::success((), Some("Logs cleared")))
 }

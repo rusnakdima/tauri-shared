@@ -1,4 +1,7 @@
+use once_cell::sync::Lazy;
 use regex::Regex;
+
+static URL_STRIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"https?://\S+").unwrap());
 
 /// Sanitize JSON by removing MongoDB operator keys (keys starting with $)
 pub fn sanitize_for_mongo(value: &mut serde_json::Value) {
@@ -22,8 +25,7 @@ pub fn escape_html(input: &str) -> String {
 
 /// Strip URLs from text (for chat filtering)
 pub fn strip_urls(input: &str) -> String {
-  let url_regex = Regex::new(r"https?://\S+").unwrap();
-  url_regex.replace_all(input, "[removed]").to_string()
+  URL_STRIP_REGEX.replace_all(input, "[removed]").to_string()
 }
 
 /// Cap string to maximum length, preserving UTF-8 character boundaries

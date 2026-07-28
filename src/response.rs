@@ -258,6 +258,14 @@ impl<T> Response<T> {
       data: None,
     }
   }
+
+  pub fn err(msg: impl Into<String>) -> Self {
+    Self {
+      status: Status::Error,
+      message: msg.into(),
+      data: None,
+    }
+  }
 }
 
 impl<T: Clone> Response<T> {

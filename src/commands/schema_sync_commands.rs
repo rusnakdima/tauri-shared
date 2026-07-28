@@ -6,8 +6,9 @@ use crate::storage::SchemaSyncState;
 use nosql_orm::provider::DatabaseProvider;
 use std::sync::Arc;
 
-/// Get schema from local JsonProvider (always reads from local app data dir).
-/// Frontend calls this to load the schema for the current app.
+/// Get schema from local JsonProvider wrapped in Response.
+/// Duplicates the find_by_id logic since JsonProviderState (= Arc<JsonProvider>)
+/// is not directly compatible with schema_commands::get_schema_direct (uses JsonProvider).
 #[tauri::command]
 pub async fn get_schema(
   id: String,
@@ -43,7 +44,6 @@ pub async fn get_schema(
 }
 
 /// Force sync schema from MongoDB to local JsonProvider.
-/// Call this if you need to pull the latest schema from the cloud.
 #[tauri::command]
 pub async fn sync_schema_from_cloud(
   id: String,

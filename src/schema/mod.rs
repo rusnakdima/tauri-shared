@@ -1,7 +1,10 @@
 pub mod app;
 pub mod component;
+pub mod data_binding;
+pub mod element_layout;
 pub mod entity;
 pub mod grid;
+pub mod handlers;
 pub mod i18n;
 pub mod layout;
 pub mod module;
@@ -13,7 +16,11 @@ pub mod ui_schema;
 
 pub use app::*;
 pub use component::*;
+pub use data_binding::*;
+pub use element_layout::*;
+pub use entity::*;
 pub use grid::*;
+pub use handlers::*;
 pub use i18n::*;
 pub use layout::*;
 pub use module::*;

@@ -13,6 +13,20 @@ pub struct Logger {
   file_logger: Arc<RwLock<Option<FileLogger>>>,
 }
 
+impl Clone for Logger {
+  fn clone(&self) -> Self {
+    let entries_guard = match self.entries.lock() {
+      Ok(g) => g,
+      Err(_) => return Self::new(self.max_entries),
+    };
+    Self {
+      entries: Mutex::new(entries_guard.clone()),
+      max_entries: self.max_entries,
+      file_logger: self.file_logger.clone(),
+    }
+  }
+}
+
 impl Logger {
   pub fn new(max_entries: usize) -> Self {
     Self {
@@ -23,7 +37,18 @@ impl Logger {
   }
 
   pub fn with_file_logger(self, path: std::path::PathBuf) -> Result<Self, std::io::Error> {
-    *self.file_logger.write().unwrap() = Some(FileLogger::new(path)?);
+    {
+      let mut guard = match self.file_logger.write() {
+        Ok(g) => g,
+        Err(_) => {
+          return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "File logger lock poisoned",
+          ))
+        }
+      };
+      *guard = Some(FileLogger::new(path)?);
+    }
     Ok(self)
   }
 
@@ -44,13 +69,20 @@ impl Logger {
   }
 
   /// Get the current global log level
-  pub fn get_level() -> LogLevel {
-    Self::global_level().read().unwrap().clone()
+  pub fn get_level() -> Result<LogLevel, String> {
+    let guard = match Self::global_level().read() {
+      Ok(g) => g,
+      Err(_) => return Err("Log level lock poisoned".to_string()),
+    };
+    Ok(guard.clone())
   }
 
   pub fn log(&self, level: LogLevel, message: &str, source: Option<&str>) {
     // Check if this level should be logged based on current minimum level
-    let min_level = Self::get_level();
+    let min_level = match Self::get_level() {
+      Ok(l) => l,
+      Err(_) => return,
+    };
     if !level.is_enabled(min_level) {
       return; // Skip logging below the minimum level
     }
@@ -63,7 +95,10 @@ impl Logger {
       metadata: None,
     };
 
-    let mut entries = self.entries.lock().unwrap();
+    let mut entries = match self.entries.lock() {
+      Ok(g) => g,
+      Err(_) => return,
+    };
     entries.push(entry.clone());
 
     if entries.len() > self.max_entries {
@@ -77,27 +112,36 @@ impl Logger {
     }
   }
 
-  pub fn debug(&self, message: &str, source: Option<&str>) {
-    self.log(LogLevel::Debug, message, source);
+  pub fn debug(&self, message: &str) {
+    self.log(LogLevel::Debug, message, None);
   }
 
-  pub fn info(&self, message: &str, source: Option<&str>) {
-    self.log(LogLevel::Info, message, source);
+  pub fn info(&self, message: &str) {
+    self.log(LogLevel::Info, message, None);
   }
 
-  pub fn warn(&self, message: &str, source: Option<&str>) {
-    self.log(LogLevel::Warn, message, source);
+  pub fn warn(&self, message: &str) {
+    self.log(LogLevel::Warn, message, None);
   }
 
-  pub fn error(&self, message: &str, source: Option<&str>) {
-    self.log(LogLevel::Error, message, source);
+  pub fn error(&self, message: &str) {
+    self.log(LogLevel::Error, message, None);
   }
 
-  pub fn get_entries(&self) -> Vec<LogEntry> {
-    self.entries.lock().unwrap().clone()
+  pub fn get_entries(&self) -> Result<Vec<LogEntry>, String> {
+    let guard = match self.entries.lock() {
+      Ok(g) => g,
+      Err(_) => return Err("Logger entries lock poisoned".to_string()),
+    };
+    Ok(guard.clone())
   }
 
-  pub fn clear(&self) {
-    self.entries.lock().unwrap().clear();
+  pub fn clear(&self) -> Result<(), String> {
+    let mut guard = match self.entries.lock() {
+      Ok(g) => g,
+      Err(_) => return Err("Logger entries lock poisoned".to_string()),
+    };
+    guard.clear();
+    Ok(())
   }
 }
