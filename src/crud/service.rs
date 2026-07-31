@@ -1,13 +1,14 @@
 use crate::response::Response;
 use nosql_orm::prelude::*;
 use serde_json::Value;
+use std::sync::Arc;
 
-pub struct CrudService<'a> {
-  provider: &'a JsonProvider,
+pub struct CrudService {
+  provider: Arc<JsonProvider>,
 }
 
-impl<'a> CrudService<'a> {
-  pub fn new(provider: &'a JsonProvider) -> Self {
+impl CrudService {
+  pub fn new(provider: Arc<JsonProvider>) -> Self {
     Self { provider }
   }
 
