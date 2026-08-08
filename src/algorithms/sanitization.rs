@@ -1,7 +1,9 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-static URL_STRIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"https?://\S+").unwrap());
+static URL_STRIP_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"https?://\S+").expect("URL_STRIP_REGEX compilation should never fail")
+});
 
 /// Sanitize JSON by removing MongoDB operator keys (keys starting with $)
 pub fn sanitize_for_mongo(value: &mut serde_json::Value) {
